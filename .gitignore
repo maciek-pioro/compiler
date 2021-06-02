@@ -1,2 +1,4 @@
 ConsoleApp1/obj/*
 ConsoleApp1/bin/*
+parser.cs
+ConsoleApp1/kompilator.cs
