@@ -67,7 +67,7 @@ instruction       : Read {
                   | Write {
                     // Compiler.EmitCode($"The expression equals {$1}");
                   } constant Semicolon {
-                    Compiler.EmitCode("X");
+                    // Compiler.EmitCode("X");
                   }
                   | Write expression Comma Hex Semicolon
                   | Write expression Semicolon {
@@ -99,7 +99,7 @@ type              : Int {
   $$.type = Type.Integer;
 }
                   | Double {
-  $$.type = Type.Real;
+  $$.type = Type.Double;
 }
                   | Bool {
   $$.type = Type.Boolean;
@@ -110,7 +110,7 @@ type              : Int {
                     }; */
 
 constant          : RealNumber {
-  $$.tree = new Constant(Type.Double, $1.value);
+  // $$.tree = new Constant(Type.Double, $1.value);
 }
                   | IntNumber 
                   | True
@@ -122,7 +122,6 @@ expression        : expression Plus expression {
                     $$ = $$;
                   }
                   | Ident Assign expression {
-                    $$.tree = 
                   }
                   | Ident
                   | constant {

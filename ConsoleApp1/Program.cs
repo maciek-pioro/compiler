@@ -9,7 +9,7 @@ public enum Type
 {
     Integer,
     Boolean, 
-    Real
+    Double
 }
 
 //public class Variable {
@@ -31,8 +31,16 @@ public abstract class Tree
     public Dictionary<String, Variable> variables;
     public Tree parent;
     public List<Tree> children;
-    
-    public abstract bool validate();
+    public Type type;
+    public string resultVariable;
+    private static int temporaryVariablesCount = 0; 
+
+    public Tree()
+    {
+        ++temporaryVariablesCount;
+    }
+
+public abstract bool validate();
     
     abstract public String genCode();
 }
@@ -148,8 +156,8 @@ public class DeclarationList : Tree
 
 public class Variable : Tree
 {
-    public Type type;
     public string internalIdentifier;
+    private static int variablesCount = 0;
 
     public Variable(Type type)
     {
@@ -168,7 +176,7 @@ public class Variable : Tree
                     typeConst = "i1";
                     break;
                 }
-            case Type.Real:
+            case Type.Double:
                 {
                     typeConst = "double";
                     break;
@@ -180,6 +188,30 @@ public class Variable : Tree
                 }
         }
         return $"%{internalIdentifier} = alloca {typeConst}\n";
+    }
+
+    public override bool validate()
+    {
+        throw new NotImplementedException();
+    }
+}
+
+public class Write : Tree
+{
+    public Write(Tree child)
+    {
+        this.children[0] = child;
+    }
+
+    public override string genCode()
+    {
+        var childCode = children[0].genCode();
+        string childResult = children[0].resultVariable;
+        string typeString = "i32";
+        string format = "@intFormat";
+        string result = $"call i32(i8*, ...) @printf(i8 * bitcast([3 x i8] * {format} to i8 *), {typeString} %{childResult})";
+        return childCode + result;
+
     }
 
     public override bool validate()
