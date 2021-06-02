@@ -1,0 +1,9 @@
+C:\Users\macie\OneDrive\Documents\Uni\2021-2021\MT\Zadanie\Rozwiązanie\ConsoleApp1\obj\Debug\ConsoleApp1.csprojAssemblyReference.cache
+C:\Users\macie\OneDrive\Documents\Uni\2021-2021\MT\Zadanie\Rozwiązanie\ConsoleApp1\obj\Debug\ConsoleApp1.csproj.CoreCompileInputs.cache
+C:\Users\macie\OneDrive\Documents\Uni\2021-2021\MT\Zadanie\Rozwiązanie\ConsoleApp1\bin\Debug\ConsoleApp1.exe.config
+C:\Users\macie\OneDrive\Documents\Uni\2021-2021\MT\Zadanie\Rozwiązanie\ConsoleApp1\bin\Debug\ConsoleApp1.exe
+C:\Users\macie\OneDrive\Documents\Uni\2021-2021\MT\Zadanie\Rozwiązanie\ConsoleApp1\bin\Debug\ConsoleApp1.pdb
+C:\Users\macie\OneDrive\Documents\Uni\2021-2021\MT\Zadanie\Rozwiązanie\ConsoleApp1\bin\Debug\QUT.ShiftReduceParser.dll
+C:\Users\macie\OneDrive\Documents\Uni\2021-2021\MT\Zadanie\Rozwiązanie\ConsoleApp1\obj\Debug\ConsoleApp1.csproj.CopyComplete
+C:\Users\macie\OneDrive\Documents\Uni\2021-2021\MT\Zadanie\Rozwiązanie\ConsoleApp1\obj\Debug\ConsoleApp1.exe
+C:\Users\macie\OneDrive\Documents\Uni\2021-2021\MT\Zadanie\Rozwiązanie\ConsoleApp1\obj\Debug\ConsoleApp1.pdb

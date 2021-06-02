@@ -1,0 +1,6 @@
+program
+{
+   int a;
+   double c, kkk;
+   return;
+}
