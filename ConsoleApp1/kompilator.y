@@ -110,16 +110,22 @@ type              : Int {
                     }; */
 
 constant          : RealNumber {
-  // $$.tree = new Constant(Type.Double, $1.value);
+                    $$.tree = new Constant(Type.Double, $1.value);
 }
-                  | IntNumber 
+                  | IntNumber {
+                    $$.tree = new Constant(Type.Double, $1.value);
+}
                   | True
-                  | False
+                  | False 
                   | String 
                   ;
 
+leaf              : constant
+                  | Ident
+                  ;
+
 expression        : expression Plus expression {
-                    $$ = $$;
+                    // $$ = $$;
                   }
                   | Ident Assign expression {
                   }
@@ -128,6 +134,35 @@ expression        : expression Plus expression {
                     $$.tree = $1.tree;
                   }
                   ;
+unary             : Minus unary 
+                  | BitNot unary
+                  | LogicalNot unary
+                  | OpenPar Int ClosePar unary
+                  | OpenPar Double ClosePar unary
+                  | leaf;
+bitwise           : bitwise BitOr bitwise 
+                  | bitwise BitAnd bitwise
+                  | unary;
+multiplicative    : multiplicative Multiplies multiplicative 
+                  | multiplicative Divides multiplicative
+                  | bitwise;
+additive          : additive Plus additive 
+                  | additive Minus additive
+                  | multiplicative;
+relation          : relation Equals relation 
+                  | relation NotEquals relation
+                  | relation GT relation
+                  | relation GEQ relation
+                  | relation LT relation
+                  | relation LEQ relation
+                  | additive;
+logical           : logical LogicalOr logical 
+                  | logical LogicalAnd logical
+                  | relation;
+assignment        : Ident Assign assignment
+                  | logical;
+
+
 
 %%
 public Parser(Scanner scanner) : base(scanner) { }
