@@ -12,19 +12,24 @@ public enum Type
     Double
 }
 
-//public class Variable {
-//    public Type type;
-//    public static int variablesCount = 0;
-//    public string internalIdentifier;
+public static class TypeStringer
+{
+    public static string ToLLVMString(this Type type)
+    {
+        switch (type)
+        {
+            case Type.Boolean:
+                return "i1";
+            case Type.Double:
+                return "double";
+            case Type.Integer:
+                return "i32";
+            default:
+                return "ERROR";
+        }
+    }
 
-//    public Variable(Type type)
-//    {
-//        this.type = type;
-//        internalIdentifier = $"variable_{variablesCount}";
-//        ++variablesCount;
-//    }
-
-//}
+}
 
 public abstract class Tree
 {
@@ -37,26 +42,62 @@ public abstract class Tree
 
     public Tree()
     {
+        variables = new Dictionary<string, Variable>();
+        resultVariable = $"tmp_{temporaryVariablesCount}";
+        this.children = new List<Tree>();
         ++temporaryVariablesCount;
     }
 
-public abstract bool validate();
+    public Variable getVariable(string identifier)
+    {
+        Console.WriteLine(this.GetType());
+        if (variables.TryGetValue(identifier, out Variable variable))
+        {
+            Console.WriteLine($"Found {identifier}");
+            return variable;
+        }
+        return parent?.getVariable(identifier);
+    }
+
+    public override string ToString()
+    {
+        string typeConst = type.ToLLVMString();
+        return $"{typeConst} %{resultVariable}";
+    }
+
+    public void setParent(Tree tree = null)
+    {
+        Console.WriteLine("Setting parent");
+        this.parent = tree;
+        foreach(var child in children)
+        {
+            child.setParent(this);
+        }
+    }
+
+    public virtual bool validate()
+    {
+        bool result = true;
+        foreach(var child in children)
+        {
+            result = result && child.validate();
+        }
+        return result;
+    }
     
     abstract public String genCode();
 }
 
 public class Program: Tree
 {
-    private Tree declarations;
-    private Tree instructions;
+    private Tree declarations { get { return children[0]; } }
+    private Tree instructions { get { return children[1]; } }
 
     public Program(Tree declarations, Tree instructions)
     {
-        this.parent = null;
-        this.declarations = declarations;
-        this.instructions = instructions;
+        this.children.Add(declarations);
+        this.children.Add(instructions);
         this.variables = declarations.variables;
-        this.children = new List<Tree>();
     }
 
     public override String genCode()
@@ -64,20 +105,51 @@ public class Program: Tree
         String declarations_code = declarations.genCode();
         String instructions_code = instructions.genCode();
         return
-            @"@intFormat = constant [3 x i8] c""%d\00""" +
+            @"@i32Format = constant [3 x i8] c""%d\00""" + "\n" +
+            @"@doubleFormat = constant [3 x i8] c""%f\00""" +
             "\n declare i32 @printf(i8*, ...)\n" +
             "declare i32 @scanf(i8 *, ...) \n" +
-            "define void @main(){\n" +
+            "define i32 @main(){\n" +
             @"%l_double = alloca double
             %r_double = alloca double
-            %l_int = alloca i32
-            %r_int = alloca i32
-            %l_boolean = alloca i1
-            %r_boolean = alloca i1" +
+            %result_double = alloca double
+            %l_i32 = alloca i32
+            %r_i32 = alloca i32
+            %result_i32 = alloca i32
+            %l_i1 = alloca i1
+            %r_i1 = alloca i1
+            %result_i1 = alloca i1" +
             $"\n {declarations_code} " +
             $"\n {instructions_code} \n " +
-            "ret void\n" +
+            "ret i32 0\n" +
             "}";
+    }
+
+    //public override bool validate()
+    //{
+    //    bool valid = true;
+    //    foreach(var child in children)
+    //    {
+    //        valid = valid && child.validate();
+    //    }
+    //    return valid;
+    //}
+}
+
+public class Literal : Tree
+{
+    string value;
+    public Literal(Type type, string value)
+    {
+        this.type = type;
+        this.value = value;
+    }
+
+    public override string genCode()
+    {
+        string typeString = this.type.ToLLVMString();
+        return $"store {typeString} {value}, {typeString}* %result_{typeString}\n" +
+            $"%{this.resultVariable} = load {typeString}, {typeString}* %result_{typeString}\n";
     }
 
     public override bool validate()
@@ -85,23 +157,17 @@ public class Program: Tree
         return true;
     }
 }
-
 public class DeclarationList : Tree
 {
 
-    public DeclarationList()
+    public DeclarationList(): base()
     {
-        //this.parent = null;
-        //this.declarations = declarations;
-        //this.instructions = instructions;
-        //this.variables = declarations.variables;
-        this.children = new List<Tree>();
-        this.variables = new Dictionary<string, Variable>();
+        children = new List<Tree>();
+        variables = new Dictionary<string, Variable>();
     }
 
     public override String genCode()
     {
-        //String declarations_code = declarations.genCode();
         string result = "";
         foreach(var child in children)
         {
@@ -112,55 +178,58 @@ public class DeclarationList : Tree
 
     public override bool validate()
     {
+        foreach(var child in children)
+        {
+            if (variables.TryGetValue(((Variable)child).name, out var variable))
+            {
+                Console.WriteLine($"variable {variable.name} already declared");
+                return false;
+            } else
+            {
+                variables.Add(((Variable)child).name, (Variable)child);
+            }
+        }
         return true;
     }
 }
 
-//public class Constant : Tree
-//{
-//    String value { get; set; }
 
-//    public Constant(String value)
-//    {
-//        this.value = value;
-//    }
+public class InstructionList : Tree
+{
 
-//    public override string genCode()
-//    {
-//        Console.WriteLine(value);
-//        return value;
-//    }
+    public InstructionList() : base() { }
 
-//    public override bool validate()
-//    {
-//        throw new NotImplementedException();
-//    }
-//}
+    public override String genCode()
+    {
+        string result = "";
+        foreach (var child in children)
+        {
+            result += child.genCode();
+        }
+        return result;
+    }
 
-//public class Identifier : Tree
-//{
-//    String name { get; set; }
+    public override bool validate()
+    {
+        bool result = true;
+        foreach (var child in children)
+        {
+            result = result && child.validate();
+        }
+        return true;
+    }
+}
 
-//    public Identifier(String name)
-//    {
-//        this.name = name;
-//    }
-
-//    public override string genCode()
-//    {
-//        Console.WriteLine(name);
-//        return name;
-//    }
-
-//}
 
 public class Variable : Tree
 {
     public string internalIdentifier;
+    public string name;
     private static int variablesCount = 0;
 
-    public Variable(Type type)
+    public Variable(Type type, string name): base()
     {
+        this.name = name;
         this.type = type;
         internalIdentifier = $"variable_{variablesCount}";
         ++variablesCount;
@@ -168,72 +237,138 @@ public class Variable : Tree
 
     public override string genCode()
     {
-        string typeConst = "i32";
-        switch(type)
-        {
-            case Type.Boolean:
-                {
-                    typeConst = "i1";
-                    break;
-                }
-            case Type.Double:
-                {
-                    typeConst = "double";
-                    break;
-                }
-            case Type.Integer:
-                {
-                    typeConst = "i32";
-                    break;
-                }
-        }
+        string typeConst = type.ToLLVMString();
         return $"%{internalIdentifier} = alloca {typeConst}\n";
     }
 
-    public override bool validate()
+    public override string ToString()
     {
-        throw new NotImplementedException();
+        string typeConst = type.ToLLVMString();
+        return $"{typeConst}* %{internalIdentifier}";
+    }
+
+    public override bool validate()
+    { 
+        return true;
     }
 }
 
 public class Write : Tree
 {
-    public Write(Tree child)
+    public Write(Tree child): base()
     {
-        this.children[0] = child;
+        this.children.Add(child);
     }
 
     public override string genCode()
     {
         var childCode = children[0].genCode();
         string childResult = children[0].resultVariable;
-        string typeString = "i32";
-        string format = "@intFormat";
-        string result = $"call i32(i8*, ...) @printf(i8 * bitcast([3 x i8] * {format} to i8 *), {typeString} %{childResult})";
-        return childCode + result;
 
+        string typeString = "i32";
+        string format = "@so";
+        switch(children[0].type)
+        {
+            case Type.Boolean:
+                {
+                    return "";
+                }
+            case Type.Double:
+                {
+                    format = "@doubleFormat";
+                    break;
+                }
+            case Type.Integer:
+                {
+                    format = "@i32Format";
+                    break;
+                }
+        }
+        Console.WriteLine($"Format {format}");
+        typeString = children[0].type.ToLLVMString();
+        string result = $"call i32(i8*, ...) @printf(i8 * bitcast([3 x i8] * {format} to i8 *), {typeString} %{childResult})";
+        return childCode + "\n" + result;
+
+    }
+
+    //public override bool validate()
+    //{
+
+    //    return true;
+    //}
+}
+
+public class Assign: Tree
+{
+    string identifier;
+    
+    public Assign(string identifier, Tree rTree): base()
+    {
+        this.identifier = identifier;
+        this.children.Add(rTree);
+    }
+
+    public override string genCode()
+    {
+        Tree rTree = children[0];
+        var variable = getVariable(identifier);
+        resultVariable = rTree.resultVariable;
+        return rTree.genCode() + "\n" + $"store {rTree}, {variable}\n";
     }
 
     public override bool validate()
     {
-        throw new NotImplementedException();
+        Tree rTree = children[0];
+        bool result = true;
+        var variable = getVariable(identifier);
+        if (variable is null)
+        {
+            Console.WriteLine($"Undeclared identifier: {identifier}");
+            result = false;
+        }
+        result = result && rTree.validate();
+        return result;
     }
 }
 
-
-
-//public class Printer
-//{
-//    public void Print(StringLiteral)
-//    {
-
-//    }
-//}
-
-public class StringLiteral
+// Używane, kiedy jest odwołanie do wartości zmiennej, czyli zawsze oprócz przypisania do zmiennej
+public class Identifier : Tree
 {
+    string identifier;
+    public Identifier(string identifier): base()
+    {
+        this.identifier = identifier;
+    }
 
+    override public string genCode()
+    {
+        var variable = getVariable(identifier);
+        Type type = variable.type;
+        string typeString = type.ToLLVMString();
+        Console.WriteLine(this.type);
+        Console.WriteLine("asdasdasdasd");
+        return $"%{resultVariable} = load {typeString}, {variable}";
+    }
+
+
+    public override bool validate()
+    {
+        var variable = getVariable(identifier);
+        if (variable is null)
+        {
+            Console.WriteLine($"Undeclared identifier: {identifier}");
+            return false;
+        }
+        Console.WriteLine("Got the variable");
+        Console.WriteLine("Got the variable");
+        Console.WriteLine("Got the variable");
+        Console.WriteLine("Got the variable");
+        Console.WriteLine("Got the variable");
+        this.type = Type.Double;
+        return true;
+    }
 }
+
 
 public class Compiler
 {
@@ -284,6 +419,8 @@ public class Compiler
         //{
         //    return 1;
         //}
+        Program.setParent();
+        Program.validate();
         Console.WriteLine(parser.head.genCode());
         sw.Close();
         source.Close();

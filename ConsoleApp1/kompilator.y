@@ -37,11 +37,20 @@ start             : Program
 
 
 
+declaration_list  : declaration declaration_list {
+  $$.tree = $2.tree;
+  $$.tree.children.AddRange($1.tree.children);
+}
+                  | {
+                    $$.tree = new DeclarationList();
+                  }
+                  ;
+
 declaration       : type identifier_list Semicolon  {
   $$.tree = new DeclarationList();
   Type type = $1.type;
   foreach(string name in $2.stringList) {
-    $$.tree.children.Add(new Variable(type));
+    $$.tree.children.Add(new Variable(type, name));
   }
 };
 
@@ -59,18 +68,14 @@ identifier_list   : Ident {
 instruction       : Read {
                     // Compiler.EmitCode($"The expression equals {$$}");
                   } Ident Semicolon
-                  | expression {Compiler.EmitCode("Expression");} Semicolon
-                  | If {Compiler.EmitCode("If-Else");} OpenPar expression ClosePar instruction Else instruction
-                  /* | If {Compiler.EmitCode("If");} OpenPar expression ClosePar instruction  */
-                  | While OpenPar expression ClosePar instruction
-                  | Read Ident Comma Hex Semicolon
-                  | Write {
-                    // Compiler.EmitCode($"The expression equals {$1}");
-                  } constant Semicolon {
-                    // Compiler.EmitCode("X");
+                  | assignment Semicolon {
+                    $$.tree = $1.tree;
                   }
-                  | Write expression Comma Hex Semicolon
-                  | Write expression Semicolon {
+                  | If {Compiler.EmitCode("If-Else");} OpenPar assignment ClosePar instruction Else instruction
+                  | While OpenPar assignment ClosePar instruction
+                  | Read Ident Comma Hex Semicolon
+                  | Write assignment Comma Hex Semicolon
+                  | Write assignment Semicolon {
                     $$.tree = new Write($2.tree);
                   }
                   | Return Semicolon
@@ -78,20 +83,15 @@ instruction       : Read {
     /* call i32 (i8*, ...) @printf(i8* bitcast ([19 x i8]* @prompt to i8*)) */
 
 
-instruction_list  : instruction_list instruction
+instruction_list  : instruction_list instruction {
+                    $$.tree = $1.tree;
+                    $$.tree.children.Add($2.tree);
+}
                   | {
-                    $$.tree = new DeclarationList();
+                    $$.tree = new InstructionList();
                   }
                   ;
 
-declaration_list  : declaration declaration_list {
-  $$.tree = $2.tree;
-  $$.tree.children.Add($1.tree);
-}
-                  | {
-                    $$.tree = new DeclarationList();
-                  }
-                  ;
 
 
 
@@ -110,29 +110,21 @@ type              : Int {
                     }; */
 
 constant          : RealNumber {
-                    $$.tree = new Constant(Type.Double, $1.value);
+                    $$.tree = new Literal(Type.Double, $1.value);
 }
                   | IntNumber {
-                    $$.tree = new Constant(Type.Double, $1.value);
+                    $$.tree = new Literal(Type.Integer , $1.value);
 }
-                  | True
-                  | False 
+                  | True 
+                  | False   
                   | String 
                   ;
 
 leaf              : constant
-                  | Ident
-                  ;
-
-expression        : expression Plus expression {
-                    // $$ = $$;
+                  | Ident {
+                    $$.tree = new Identifier($1.value);
                   }
-                  | Ident Assign expression {
-                  }
-                  | Ident
-                  | constant {
-                    $$.tree = $1.tree;
-                  }
+                  | OpenPar assignment ClosePar
                   ;
 unary             : Minus unary 
                   | BitNot unary
@@ -140,26 +132,29 @@ unary             : Minus unary
                   | OpenPar Int ClosePar unary
                   | OpenPar Double ClosePar unary
                   | leaf;
-bitwise           : bitwise BitOr bitwise 
-                  | bitwise BitAnd bitwise
+bitwise           : bitwise BitOr unary
+                  | bitwise BitAnd unary
                   | unary;
-multiplicative    : multiplicative Multiplies multiplicative 
-                  | multiplicative Divides multiplicative
+multiplicative    : multiplicative Multiplies bitwise
+                  | multiplicative Divides bitwise
                   | bitwise;
-additive          : additive Plus additive 
-                  | additive Minus additive
+additive          : additive Plus multiplicative
+                  | additive Minus multiplicative
                   | multiplicative;
-relation          : relation Equals relation 
-                  | relation NotEquals relation
-                  | relation GT relation
-                  | relation GEQ relation
-                  | relation LT relation
-                  | relation LEQ relation
+relation          : relation Equals additive
+                  | relation NotEquals additive
+                  | relation GT additive
+                  | relation GEQ additive
+                  | relation LT additive
+                  | relation LEQ additive
                   | additive;
-logical           : logical LogicalOr logical 
-                  | logical LogicalAnd logical
+logical           : logical LogicalOr relation
+                  | logical LogicalAnd relation
                   | relation;
-assignment        : Ident Assign assignment
+assignment        : Ident Assign assignment {
+  Console.WriteLine("adding assignment");
+  $$.tree = new Assign($1.value, $3.tree);
+}
                   | logical;
 
 

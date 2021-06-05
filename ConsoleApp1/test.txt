@@ -2,5 +2,7 @@ program
 {
    int a;
    double c, kkk;
-   return;
+   int a;
+   c = 2.0;
+   write c;
 }
