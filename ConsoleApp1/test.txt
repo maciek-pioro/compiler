@@ -1,16 +1,12 @@
 program     {     
-   int i;
+      int i;
      double d;
-     bool b;
-     i = 11;
-     d = 123.456;
-     b = true;
+     read i;
      write i;
      write "\n";
      write i,hex;
      write "\n";
+     read d;
      write d;
-     write "\n";
-     write b;
      write "\n";
    }

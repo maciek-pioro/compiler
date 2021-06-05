@@ -65,15 +65,15 @@ identifier_list   : Ident {
                   ;
 
 
-instruction       : Read {
-                    // Compiler.EmitCode($"The expression equals {$$}");
-                  } Ident Semicolon
-                  | assignment Semicolon {
-                    $$.tree = $1.tree;
-                  }
+instruction       : assignment Semicolon { $$.tree = $1.tree; }
                   | If {Compiler.EmitCode("If-Else");} OpenPar assignment ClosePar instruction Else instruction
                   | While OpenPar assignment ClosePar instruction
-                  | Read Ident Comma Hex Semicolon
+                  | Read Ident Comma Hex Semicolon {
+                    $$.tree = new Read($2.value, true);
+                  }
+                  | Read Ident Semicolon {
+                    $$.tree = new Read($2.value);
+                  }
                   | Write assignment Comma Hex Semicolon {
                     $$.tree = new Write($2.tree, true);
                   }
@@ -100,41 +100,21 @@ instruction_list  : instruction_list instruction {
 
 
 
-type              : Int {
-  $$.type = Type.Integer;
-}
-                  | Double {
-  $$.type = Type.Double;
-}
-                  | Bool {
-  $$.type = Type.Boolean;
-};
+type              : Int { $$.type = Type.Integer; }
+                  | Double { $$.type = Type.Double; }
+                  | Bool { $$.type = Type.Boolean; };
 
-/* operator          : Plus {
-                      $$ = $2;
-                    }; */
-
-constant          : RealNumber {
-                    $$.tree = new Literal(Type.Double, $1.value);
-}
-                  | IntNumber {
-                    $$.tree = new Literal(Type.Integer, $1.value);
-}
-                  | True {
-                    $$.tree = new Literal(Type.Boolean, "true");
-}
-                  | False {
-                    $$.tree = new Literal(Type.Boolean, "false");
-}
-                  | String 
+constant          : RealNumber { $$.tree = new Literal(Type.Double, $1.value); }
+                  | IntNumber { $$.tree = new Literal(Type.Integer, $1.value); }
+                  | True { $$.tree = new Literal(Type.Boolean, "true"); }
+                  | False { $$.tree = new Literal(Type.Boolean, "false"); }
                   ;
 
 leaf              : constant
-                  | Ident {
-                    $$.tree = new Identifier($1.value);
-                  }
+                  | Ident { $$.tree = new Identifier($1.value); }
                   | OpenPar assignment ClosePar
                   ;
+
 unary             : Minus unary 
                   | BitNot unary
                   | LogicalNot unary

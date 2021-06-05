@@ -115,7 +115,7 @@ public class Program: Tree
         this.variables = declarations.variables;
         this.stringNodes = new List<Tree>();
     }
-
+   
     public override String genCode()
     {
         String declarations_code = declarations.genCode();
@@ -132,6 +132,9 @@ public class Program: Tree
             @"@stringFormat = constant [3 x i8] c""%s\00""" + "\n" +
             @"@trueString = constant [5 x i8] c""True\00""" + "\n" +
             @"@falseString = constant [6 x i8] c""False\00""" + "\n" +
+            @"@readInt = constant[3 x i8] c""%d\00""" + "\n" +
+            @"@readIntHex = constant[3 x i8] c""%X\00""" + "\n" +
+            @"@readDouble = constant[4 x i8] c""%lf\00""" + "\n" +
             strings_code + "\n" +
             "\n declare i32 @printf(i8*, ...)\n" +
             "declare i32 @scanf(i8 *, ...) \n" +
@@ -367,6 +370,69 @@ public class Write : Tree
     }
 
 }
+public class Read : Tree
+{
+    private Variable variable;
+    private string identifier;
+    private bool isHex;
+    public Read(string identifier, bool isHex = false) : base()
+    {
+        this.identifier = identifier;
+        this.isHex = isHex;
+    }
+
+    public override string genCode()
+    {
+        string format = null;
+        int length = 3;
+        switch (variable.type)
+        {
+            case Type.Double:
+                {
+                    format = "readDouble";
+                    length = 4;
+                    break;
+                }
+            case Type.Integer:
+                {
+                    if (isHex)
+                    {
+                        format = "readIntHex";
+                    }
+                    else
+                    {
+                        format = "readInt";
+                    }
+                    break;
+                }
+        }
+        return $"call i32 (i8*, ...) @scanf(i8* bitcast ([{length} x i8]* @{format} to i8*), {variable})\n";
+    }
+
+    public override bool validate()
+    {
+        var variable = getVariable(identifier);
+        bool result = true;
+        if (variable is null)
+        {
+            Console.WriteLine($"Undeclared identifier: {identifier}");
+            result = false;
+        }
+        this.variable = variable;
+        if (variable.type != Type.Integer && variable.type != Type.Double)
+        {
+            Console.WriteLine($"Can only write to integer and double");
+            result = false;
+        }
+        if (variable.type != Type.Integer && isHex)
+        {
+            Console.WriteLine($"Can only write hex to int");
+            result = false;
+        }
+        return result;
+    }
+
+}
 
 public class StringLiteral : Tree
 {
@@ -464,11 +530,6 @@ public class Identifier : Tree
             Console.WriteLine($"Undeclared identifier: {identifier}");
             return false;
         }
-        Console.WriteLine("Got the variable");
-        Console.WriteLine("Got the variable");
-        Console.WriteLine("Got the variable");
-        Console.WriteLine("Got the variable");
-        Console.WriteLine("Got the variable");
         this.type = variable.type;
         return true;
     }
