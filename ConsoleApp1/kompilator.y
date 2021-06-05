@@ -74,7 +74,9 @@ instruction       : Read {
                   | If {Compiler.EmitCode("If-Else");} OpenPar assignment ClosePar instruction Else instruction
                   | While OpenPar assignment ClosePar instruction
                   | Read Ident Comma Hex Semicolon
-                  | Write assignment Comma Hex Semicolon
+                  | Write assignment Comma Hex Semicolon {
+                    $$.tree = new Write($2.tree, true);
+                  }
                   | Write assignment Semicolon {
                     $$.tree = new Write($2.tree);
                   }
@@ -152,7 +154,6 @@ logical           : logical LogicalOr relation
                   | logical LogicalAnd relation
                   | relation;
 assignment        : Ident Assign assignment {
-  Console.WriteLine("adding assignment");
   $$.tree = new Assign($1.value, $3.tree);
 }
                   | logical;

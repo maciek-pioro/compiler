@@ -2,7 +2,7 @@ program
 {
    int a;
    double c, kkk;
-   int a;
-   c = 2.0;
-   write c;
+   a = 0XBa1;
+   // XXXX
+   write a, hex; //lalalal
 }

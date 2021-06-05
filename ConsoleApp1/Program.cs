@@ -67,7 +67,6 @@ public abstract class Tree
 
     public void setParent(Tree tree = null)
     {
-        Console.WriteLine("Setting parent");
         this.parent = tree;
         foreach(var child in children)
         {
@@ -105,6 +104,7 @@ public class Program: Tree
         String declarations_code = declarations.genCode();
         String instructions_code = instructions.genCode();
         return
+            @"@i32HexFormat = constant [3 x i8] c""%X\00""" + "\n" +
             @"@i32Format = constant [3 x i8] c""%d\00""" + "\n" +
             @"@doubleFormat = constant [3 x i8] c""%f\00""" +
             "\n declare i32 @printf(i8*, ...)\n" +
@@ -142,7 +142,9 @@ public class Literal : Tree
     public Literal(Type type, string value)
     {
         this.type = type;
-        this.value = value;
+        if(value.Substring(0, 2).Equals("0X") || value.Substring(0, 2).Equals("0x"))
+            this.value = Convert.ToInt32(value, 16).ToString();
+
     }
 
     public override string genCode()
@@ -255,18 +257,18 @@ public class Variable : Tree
 
 public class Write : Tree
 {
-    public Write(Tree child): base()
+    private bool isHex;
+    public Write(Tree child, bool isHex = false): base()
     {
         this.children.Add(child);
+        this.isHex = isHex;
     }
 
     public override string genCode()
     {
         var childCode = children[0].genCode();
         string childResult = children[0].resultVariable;
-
-        string typeString = "i32";
-        string format = "@so";
+        string format = null;
         switch(children[0].type)
         {
             case Type.Boolean:
@@ -280,22 +282,24 @@ public class Write : Tree
                 }
             case Type.Integer:
                 {
-                    format = "@i32Format";
+                    if (isHex)
+                    {
+                        format = "@i32HexFormat";
+                    }
+                    else
+                    {
+                        format = "@i32Format";
+                    }
                     break;
                 }
         }
         Console.WriteLine($"Format {format}");
-        typeString = children[0].type.ToLLVMString();
+        var typeString = children[0].type.ToLLVMString();
         string result = $"call i32(i8*, ...) @printf(i8 * bitcast([3 x i8] * {format} to i8 *), {typeString} %{childResult})";
         return childCode + "\n" + result;
 
     }
 
-    //public override bool validate()
-    //{
-
-    //    return true;
-    //}
 }
 
 public class Assign: Tree
@@ -364,7 +368,7 @@ public class Identifier : Tree
         Console.WriteLine("Got the variable");
         Console.WriteLine("Got the variable");
         Console.WriteLine("Got the variable");
-        this.type = Type.Double;
+        this.type = variable.type;
         return true;
     }
 }
@@ -420,7 +424,10 @@ public class Compiler
         //    return 1;
         //}
         Program.setParent();
-        Program.validate();
+        if(!Program.validate()) {
+            Console.WriteLine("Errors detected :(, aborting");
+            return 1;
+        }
         Console.WriteLine(parser.head.genCode());
         sw.Close();
         source.Close();
