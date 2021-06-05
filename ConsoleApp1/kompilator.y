@@ -24,18 +24,15 @@
 
 start             : Program 
                     OpenBra 
-                    declaration_list 
-                    instruction_list
+                    block_inside
                     CloseBra 
                     EOF 
                     {
-                      head = new Program($3.tree, $4.tree);
+                      head = new Program($3.tree);
                     }
                   ;
 
-block_inside      : declaration_list 
-                    instruction_list;
-
+block_inside      : declaration_list instruction_list {$$.tree = new Block($1.tree, $2.tree); } ;
 
 declaration_list  : declaration declaration_list {
   $$.tree = $2.tree;
@@ -69,6 +66,7 @@ instruction       : assignment Semicolon { $$.tree = $1.tree; }
                   | If OpenPar assignment ClosePar instruction {$$.tree = new If($3.tree, $5.tree, null);}
                   | If OpenPar assignment ClosePar instruction Else instruction {$$.tree = new If($3.tree, $5.tree, $7.tree);}
                   | While OpenPar assignment ClosePar instruction
+                  | OpenBra block_inside CloseBra {$$.tree = $2.tree;}
                   | Read Ident Comma Hex Semicolon {
                     $$.tree = new Read($2.value, true);
                   }

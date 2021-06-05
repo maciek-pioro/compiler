@@ -105,21 +105,14 @@ public class Program: Tree
 {
     public List<Tree> stringNodes;
 
-    private Tree declarations { get { return children[0]; } }
-    private Tree instructions { get { return children[1]; } }
-
-    public Program(Tree declarations, Tree instructions)
+    public Program(Tree block)
     {
-        this.children.Add(declarations);
-        this.children.Add(instructions);
-        this.variables = declarations.variables;
+        this.children.Add(block);
         this.stringNodes = new List<Tree>();
     }
    
     public override String genCode()
     {
-        String declarations_code = declarations.genCode();
-        String instructions_code = instructions.genCode();
         String strings_code = "";
         foreach(var node in stringNodes)
         {
@@ -148,8 +141,7 @@ public class Program: Tree
             %l_i1 = alloca i1
             %r_i1 = alloca i1
             %result_i1 = alloca i1" +
-            $"\n {declarations_code} " +
-            $"\n {instructions_code} \n " +
+            children[0].genCode() +
             "ret i32 0\n" +
             "}";
     }
@@ -161,16 +153,28 @@ public class Program: Tree
         return null;
     }
 
-    //public override bool validate()
-    //{
-    //    bool valid = true;
-    //    foreach(var child in children)
-    //    {
-    //        valid = valid && child.validate();
-    //    }
-    //    return valid;
-    //}
 }
+
+public class Block : Tree
+{
+    private Tree declarations { get { return children[0]; } }
+    private Tree instructions { get { return children[1]; } }
+
+    public Block(Tree declarations, Tree instructions)
+    {
+        this.children.Add(declarations);
+        this.children.Add(instructions);
+        this.variables = declarations.variables;
+    }
+
+    public override String genCode()
+    {
+        String declarations_code = declarations.genCode();
+        String instructions_code = instructions.genCode();
+        return declarations_code + "\n" + instructions_code + "\n";
+    }
+}
+
 
 public class Literal : Tree
 {
@@ -184,7 +188,7 @@ public class Literal : Tree
             if (value == "false") value = "0";
         }
         if (this.type == Type.Integer) {
-            if (value.Substring(0, 2).Equals("0X") || value.Substring(0, 2).Equals("0x"))
+            if( value.Length > 2 && (value.Substring(0, 2).Equals("0X") || value.Substring(0, 2).Equals("0x")))
                 value = Convert.ToInt32(value, 16).ToString();
         }
         this.value = value;
@@ -238,7 +242,6 @@ public class DeclarationList : Tree
     }
 }
 
-
 public class InstructionList : Tree
 {
 
@@ -259,9 +262,9 @@ public class InstructionList : Tree
         bool result = true;
         foreach (var child in children)
         {
-            result = result && child.validate();
+            result = child.validate() && result;
         }
-        return true;
+        return result;
     }
 }
 
@@ -473,7 +476,7 @@ public class If : Tree
             Console.WriteLine("If-condition must be a boolean");
             result = false;
         }
-        return result;
+        return base.validate() && result;
     }
 
 }

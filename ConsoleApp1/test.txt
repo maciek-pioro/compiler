@@ -1,6 +1,15 @@
-program     {     
-     if(false) 
-        write "True";
-     else 
-        write "False";
+program 
+{
+   int i;
+   i=2;
+   if(true) {
+      int i;
+      write "True";
+      i = 3;
    }
+   else{
+      i = 4;
+      write "False";
+   }
+   write i;
+}
