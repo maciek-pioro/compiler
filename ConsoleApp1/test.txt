@@ -1,8 +1,16 @@
-program
-{
-   int a;
-   double c, kkk;
-   a = 0XBa1;
-   // XXXX
-   write "lalal"; //lalalal
-}
+program     {     
+   int i;
+     double d;
+     bool b;
+     i = 11;
+     d = 123.456;
+     b = true;
+     write i;
+     write "\n";
+     write i,hex;
+     write "\n";
+     write d;
+     write "\n";
+     write b;
+     write "\n";
+   }

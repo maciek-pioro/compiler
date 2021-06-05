@@ -118,10 +118,14 @@ constant          : RealNumber {
                     $$.tree = new Literal(Type.Double, $1.value);
 }
                   | IntNumber {
-                    $$.tree = new Literal(Type.Integer , $1.value);
+                    $$.tree = new Literal(Type.Integer, $1.value);
 }
-                  | True 
-                  | False   
+                  | True {
+                    $$.tree = new Literal(Type.Boolean, "true");
+}
+                  | False {
+                    $$.tree = new Literal(Type.Boolean, "false");
+}
                   | String 
                   ;
 

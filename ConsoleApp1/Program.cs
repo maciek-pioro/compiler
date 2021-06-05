@@ -39,7 +39,9 @@ public abstract class Tree
     public List<Tree> children;
     public Type type;
     public string resultVariable;
-    private static int temporaryVariablesCount = 0; 
+    private static int temporaryVariablesCount = 0;
+    protected int uniqueId;
+    private static int ids = 0;
 
     public Tree()
     {
@@ -47,6 +49,7 @@ public abstract class Tree
         resultVariable = $"tmp_{temporaryVariablesCount}";
         this.children = new List<Tree>();
         ++temporaryVariablesCount;
+        uniqueId = ids++;
     }
 
     public Variable getVariable(string identifier)
@@ -123,10 +126,12 @@ public class Program: Tree
             strings_code = strings_code + "\n" + node.genCode();
         }
         return
-            @"@i32HexFormat = constant [3 x i8] c""%X\00""" + "\n" +
+            @"@i32HexFormat = constant [5 x i8] c""0X%X\00""" + "\n" +
             @"@i32Format = constant [3 x i8] c""%d\00""" + "\n" +
             @"@doubleFormat = constant [3 x i8] c""%f\00""" + "\n" +
             @"@stringFormat = constant [3 x i8] c""%s\00""" + "\n" +
+            @"@trueString = constant [5 x i8] c""True\00""" + "\n" +
+            @"@falseString = constant [6 x i8] c""False\00""" + "\n" +
             strings_code + "\n" +
             "\n declare i32 @printf(i8*, ...)\n" +
             "declare i32 @scanf(i8 *, ...) \n" +
@@ -170,9 +175,16 @@ public class Literal : Tree
     public Literal(Type type, string value)
     {
         this.type = type;
-        if(value.Substring(0, 2).Equals("0X") || value.Substring(0, 2).Equals("0x"))
-            this.value = Convert.ToInt32(value, 16).ToString();
-
+        if(this.type == Type.Boolean)
+        {
+            if (value == "true") value = "1";
+            if (value == "false") value = "0";
+        }
+        if (this.type == Type.Integer) {
+            if (value.Substring(0, 2).Equals("0X") || value.Substring(0, 2).Equals("0x"))
+                value = Convert.ToInt32(value, 16).ToString();
+        }
+        this.value = value;
     }
 
     public override string genCode()
@@ -297,38 +309,47 @@ public class Write : Tree
         var childCode = children[0].genCode();
         string childResult = children[0].resultVariable;
         string format = null;
+        string result = "";
         var typeString = children[0].type.ToLLVMString();
         switch(children[0].type)
         {
             case Type.Boolean:
                 {
-                    return "";
+                    result = "";
+                    result += $"br {children[0]}, label %write_true_{this.uniqueId}, label %write_false_{this.uniqueId} \n";
+                    result += $"write_true_{this.uniqueId}:\n";
+                    result += $"call i32(i8*, ...) @printf(i8 * bitcast([5 x i8] * @trueString to i8 *))\n";
+                    result += $"br label %write_end_{this.uniqueId}\n";
+                    result += $"write_false_{this.uniqueId}:\n";
+                    result += $"call i32(i8*, ...) @printf(i8 * bitcast([6 x i8] * @falseString to i8 *))\n";
+                    result += $"br label %write_end_{this.uniqueId}\n";
+                    result += $"write_end_{this.uniqueId}: \n";
+                    return childCode + "\n" + result;
                 }
             case Type.Double:
                 {
-                    format = "@doubleFormat";
+                    format = "[3 x i8] * @doubleFormat to i8 *";
                     break;
                 }
             case Type.Integer:
                 {
                     if (isHex)
                     {
-                        format = "@i32HexFormat";
+                        format = "[5 x i8] * @i32HexFormat to i8 *";
                     }
                     else
                     {
-                        format = "@i32Format";
+                        format = "[3 x i8] * @i32Format to i8 *";
                     }
                     break;
                 }
             case Type.String:
                 {
                     StringLiteral childAsString = (StringLiteral)children[0];
-                    return $"call i32(i8*, ...) @printf(i8 * bitcast([3 x i8] * @stringFormat to i8 *), {childAsString.asArgument()})";
+                    return $"call i32(i8*, ...) @printf(i8 * bitcast([3 x i8] * @stringFormat to i8 *), {childAsString.asArgument()})\n";
                 }
         }
-        Console.WriteLine($"Format {format}");
-        string result = $"call i32(i8*, ...) @printf(i8 * bitcast([3 x i8] * {format} to i8 *), {typeString} %{childResult})";
+        result = $"call i32(i8*, ...) @printf(i8 * bitcast({format}), {typeString} %{childResult})\n";
         return childCode + "\n" + result;
 
     }
@@ -352,22 +373,28 @@ public class StringLiteral : Tree
     private static int stringCounter = 0;
     public string stringIdentifier;
     public string value;
+    public int effectiveLength;
+
 
     public StringLiteral(string value) :base() {
         stringIdentifier = $"@string_{stringCounter}";
         ++stringCounter;
         this.type = Type.String;
-        this.value = value.Trim('"');
+        value = value.Trim('"');
+        var parts = value.Split(new string[] { @"\n" }, StringSplitOptions.None);
+        int newLines = parts.Length - 1;
+        this.value = String.Join(@"\0A", parts);
+        effectiveLength = this.value.Length - 2 * newLines + 1;
     }
 
     public override string genCode()
     {
-        return $"{stringIdentifier} = constant[{value.Length + 1} x i8] c\"{value}\\00\"";
+        return $"{stringIdentifier} = constant[{effectiveLength} x i8] c\"{value}\\00\"";
     }
 
     public string asArgument()
     {
-        return $"i8* bitcast([{value.Length + 1} x i8]* {stringIdentifier} to i8*)";
+        return $"i8* bitcast([{effectiveLength} x i8]* {stringIdentifier} to i8*)";
     }
 
     public override List<Tree> hoistStrings()
