@@ -96,27 +96,44 @@ public abstract class Tree
             result.AddRange(child.hoistStrings());
         }
         return result;
-    } 
-    
+    }
+
+    public virtual List<Tree> hoistDeclarations()
+    {
+        var result = new List<Tree>();
+        foreach (var child in children)
+        {
+            result.AddRange(child.hoistDeclarations());
+        }
+        return result;
+    }
+
     abstract public String genCode();
 }
 
 public class Program: Tree
 {
     public List<Tree> stringNodes;
+    public List<Tree> declarationNodes;
 
     public Program(Tree block)
     {
         this.children.Add(block);
         this.stringNodes = new List<Tree>();
+        this.declarationNodes = new List<Tree>();
     }
    
     public override String genCode()
     {
-        String strings_code = "";
+        String stringsCode = "";
         foreach(var node in stringNodes)
         {
-            strings_code = strings_code + "\n" + node.genCode();
+            stringsCode = stringsCode + "\n" + node.genCode();
+        }
+        String declarationsCode = "";
+        foreach (var node in declarationNodes)
+        {
+            declarationsCode = declarationsCode + "\n" + node.genCode();
         }
         return
             @"@i32HexFormat = constant [5 x i8] c""0X%X\00""" + "\n" +
@@ -128,7 +145,7 @@ public class Program: Tree
             @"@readInt = constant[3 x i8] c""%d\00""" + "\n" +
             @"@readIntHex = constant[3 x i8] c""%X\00""" + "\n" +
             @"@readDouble = constant[4 x i8] c""%lf\00""" + "\n" +
-            strings_code + "\n" +
+            stringsCode + "\n" +
             "\n declare i32 @printf(i8*, ...)\n" +
             "declare i32 @scanf(i8 *, ...) \n" +
             "define i32 @main(){\n" +
@@ -141,6 +158,7 @@ public class Program: Tree
             %l_i1 = alloca i1
             %r_i1 = alloca i1
             %result_i1 = alloca i1" +
+            declarationsCode + "\n" +
             children[0].genCode() +
             "ret i32 0\n" +
             "}";
@@ -152,6 +170,14 @@ public class Program: Tree
         this.stringNodes = strings;
         return null;
     }
+
+    public override List<Tree> hoistDeclarations()
+    {
+        var declarations = base.hoistDeclarations();
+        this.declarationNodes = declarations;
+        return null;
+    }
+
 
 }
 
@@ -169,9 +195,9 @@ public class Block : Tree
 
     public override String genCode()
     {
-        String declarations_code = declarations.genCode();
+        //String declarations_code = declarations.genCode();
         String instructions_code = instructions.genCode();
-        return declarations_code + "\n" + instructions_code + "\n";
+        return instructions_code + "\n";
     }
 }
 
@@ -239,6 +265,11 @@ public class DeclarationList : Tree
             }
         }
         return true;
+    }
+
+    public override List<Tree> hoistDeclarations()
+    {
+        return new List<Tree>() { this};
     }
 }
 
@@ -481,6 +512,45 @@ public class If : Tree
 
 }
 
+//public class While : Tree
+//{
+//    public While(Tree condition, Tree body) : base()
+//    {
+//        children.Add(condition);
+//        children.Add(body);
+//    }
+
+//    public override string genCode()
+//    {
+//        var conditionCode = children[0].genCode();
+//        var result = $"br label while_start_{uniqueId}";
+//        result += $"while_start_{uniqueId}:";
+//        result += $"br {children[0]}, label %if_true_{this.uniqueId}, label %if_false_{this.uniqueId} \n";
+//        result += $"if_true_{this.uniqueId}:\n";
+//        result += children[1].genCode();
+//        result += $"br label %if_end_{this.uniqueId}\n";
+//        result += $"if_false_{this.uniqueId}:\n";
+//        if (hasElse)
+//        {
+//            result += children[2].genCode();
+//        }
+//        result += $"br label %if_end_{this.uniqueId}\n";
+//        result += $"if_end_{this.uniqueId}: \n";
+//        return result;
+//    }
+
+//    public override bool validate()
+//    {
+//        bool result = true;
+//        if(children[0].type!=Type.Boolean)
+//        {
+//            Console.WriteLine("If-condition must be a boolean");
+//            result = false;
+//        }
+//        return base.validate() && result;
+//    }
+
+//}
 public class StringLiteral : Tree
 {
     private static int stringCounter = 0;
@@ -638,6 +708,7 @@ public class Compiler
             return 1;
         }
         Program.hoistStrings();
+        Program.hoistDeclarations();
         Console.WriteLine(parser.head.genCode());
         sw.Close();
         source.Close();
