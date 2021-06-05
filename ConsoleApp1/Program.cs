@@ -9,7 +9,8 @@ public enum Type
 {
     Integer,
     Boolean, 
-    Double
+    Double,
+    String
 }
 
 public static class TypeStringer
@@ -83,12 +84,24 @@ public abstract class Tree
         }
         return result;
     }
+
+    public virtual List<Tree> hoistStrings()
+    {
+        var result = new List<Tree>();
+        foreach (var child in children)
+        {
+            result.AddRange(child.hoistStrings());
+        }
+        return result;
+    } 
     
     abstract public String genCode();
 }
 
 public class Program: Tree
 {
+    public List<Tree> stringNodes;
+
     private Tree declarations { get { return children[0]; } }
     private Tree instructions { get { return children[1]; } }
 
@@ -97,16 +110,24 @@ public class Program: Tree
         this.children.Add(declarations);
         this.children.Add(instructions);
         this.variables = declarations.variables;
+        this.stringNodes = new List<Tree>();
     }
 
     public override String genCode()
     {
         String declarations_code = declarations.genCode();
         String instructions_code = instructions.genCode();
+        String strings_code = "";
+        foreach(var node in stringNodes)
+        {
+            strings_code = strings_code + "\n" + node.genCode();
+        }
         return
             @"@i32HexFormat = constant [3 x i8] c""%X\00""" + "\n" +
             @"@i32Format = constant [3 x i8] c""%d\00""" + "\n" +
-            @"@doubleFormat = constant [3 x i8] c""%f\00""" +
+            @"@doubleFormat = constant [3 x i8] c""%f\00""" + "\n" +
+            @"@stringFormat = constant [3 x i8] c""%s\00""" + "\n" +
+            strings_code + "\n" +
             "\n declare i32 @printf(i8*, ...)\n" +
             "declare i32 @scanf(i8 *, ...) \n" +
             "define i32 @main(){\n" +
@@ -123,6 +144,13 @@ public class Program: Tree
             $"\n {instructions_code} \n " +
             "ret i32 0\n" +
             "}";
+    }
+
+    public override List<Tree> hoistStrings()
+    {
+        var strings = base.hoistStrings();
+        this.stringNodes = strings;
+        return null;
     }
 
     //public override bool validate()
@@ -269,6 +297,7 @@ public class Write : Tree
         var childCode = children[0].genCode();
         string childResult = children[0].resultVariable;
         string format = null;
+        var typeString = children[0].type.ToLLVMString();
         switch(children[0].type)
         {
             case Type.Boolean:
@@ -292,14 +321,59 @@ public class Write : Tree
                     }
                     break;
                 }
+            case Type.String:
+                {
+                    StringLiteral childAsString = (StringLiteral)children[0];
+                    return $"call i32(i8*, ...) @printf(i8 * bitcast([3 x i8] * @stringFormat to i8 *), {childAsString.asArgument()})";
+                }
         }
         Console.WriteLine($"Format {format}");
-        var typeString = children[0].type.ToLLVMString();
         string result = $"call i32(i8*, ...) @printf(i8 * bitcast([3 x i8] * {format} to i8 *), {typeString} %{childResult})";
         return childCode + "\n" + result;
 
     }
 
+    public override bool validate()
+    {
+        bool result = true;
+        bool baseResult = base.validate();
+        if (isHex && children[0].type != Type.Integer)
+        {
+            Console.WriteLine("Only integer values can be displayed as hex");
+            result = false;
+        }
+        return baseResult && result;
+    }
+
+}
+
+public class StringLiteral : Tree
+{
+    private static int stringCounter = 0;
+    public string stringIdentifier;
+    public string value;
+
+    public StringLiteral(string value) :base() {
+        stringIdentifier = $"@string_{stringCounter}";
+        ++stringCounter;
+        this.type = Type.String;
+        this.value = value.Trim('"');
+    }
+
+    public override string genCode()
+    {
+        return $"{stringIdentifier} = constant[{value.Length + 1} x i8] c\"{value}\\00\"";
+    }
+
+    public string asArgument()
+    {
+        return $"i8* bitcast([{value.Length + 1} x i8]* {stringIdentifier} to i8*)";
+    }
+
+    public override List<Tree> hoistStrings()
+    {
+        return new List<Tree>{ this };
+    }
 }
 
 public class Assign: Tree
@@ -428,6 +502,7 @@ public class Compiler
             Console.WriteLine("Errors detected :(, aborting");
             return 1;
         }
+        Program.hoistStrings();
         Console.WriteLine(parser.head.genCode());
         sw.Close();
         source.Close();

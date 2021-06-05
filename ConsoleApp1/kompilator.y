@@ -80,6 +80,9 @@ instruction       : Read {
                   | Write assignment Semicolon {
                     $$.tree = new Write($2.tree);
                   }
+                  | Write String Semicolon {
+                    $$.tree = new Write(new StringLiteral($2.value));
+                  }
                   | Return Semicolon
                   ;
     /* call i32 (i8*, ...) @printf(i8* bitcast ([19 x i8]* @prompt to i8*)) */

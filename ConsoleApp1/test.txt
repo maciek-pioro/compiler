@@ -4,5 +4,5 @@ program
    double c, kkk;
    a = 0XBa1;
    // XXXX
-   write a, hex; //lalalal
+   write "lalal"; //lalalal
 }
