@@ -30,11 +30,11 @@ start             : Program
                     EOF 
                     {
                       head = new Program($3.tree, $4.tree);
-                      $3.tree.parent = head;
-                      $4.tree.parent = head;
                     }
                   ;
 
+block_inside      : declaration_list 
+                    instruction_list;
 
 
 declaration_list  : declaration declaration_list {
@@ -66,7 +66,8 @@ identifier_list   : Ident {
 
 
 instruction       : assignment Semicolon { $$.tree = $1.tree; }
-                  | If {Compiler.EmitCode("If-Else");} OpenPar assignment ClosePar instruction Else instruction
+                  | If OpenPar assignment ClosePar instruction {$$.tree = new If($3.tree, $5.tree, null);}
+                  | If OpenPar assignment ClosePar instruction Else instruction {$$.tree = new If($3.tree, $5.tree, $7.tree);}
                   | While OpenPar assignment ClosePar instruction
                   | Read Ident Comma Hex Semicolon {
                     $$.tree = new Read($2.value, true);

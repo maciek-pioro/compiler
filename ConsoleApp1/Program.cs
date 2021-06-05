@@ -265,7 +265,6 @@ public class InstructionList : Tree
     }
 }
 
-
 public class Variable : Tree
 {
     public string internalIdentifier;
@@ -427,6 +426,51 @@ public class Read : Tree
         if (variable.type != Type.Integer && isHex)
         {
             Console.WriteLine($"Can only write hex to int");
+            result = false;
+        }
+        return result;
+    }
+
+}
+
+public class If : Tree
+{
+    bool hasElse = false;
+
+    public If(Tree condition, Tree body, Tree elseBody) : base()
+    {
+        children.Add(condition);
+        children.Add(body);
+        if(!(elseBody is null))
+        {
+            hasElse = true;
+            children.Add(elseBody);
+        }
+    }
+
+    public override string genCode()
+    {
+        var result = children[0].genCode();
+        result += $"br {children[0]}, label %if_true_{this.uniqueId}, label %if_false_{this.uniqueId} \n";
+        result += $"if_true_{this.uniqueId}:\n";
+        result += children[1].genCode();
+        result += $"br label %if_end_{this.uniqueId}\n";
+        result += $"if_false_{this.uniqueId}:\n";
+        if (hasElse)
+        {
+            result += children[2].genCode();
+        }
+        result += $"br label %if_end_{this.uniqueId}\n";
+        result += $"if_end_{this.uniqueId}: \n";
+        return result;
+    }
+
+    public override bool validate()
+    {
+        bool result = true;
+        if(children[0].type!=Type.Boolean)
+        {
+            Console.WriteLine("If-condition must be a boolean");
             result = false;
         }
         return result;

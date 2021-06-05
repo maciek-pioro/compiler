@@ -1,12 +1,6 @@
 program     {     
-      int i;
-     double d;
-     read i;
-     write i;
-     write "\n";
-     write i,hex;
-     write "\n";
-     read d;
-     write d;
-     write "\n";
+     if(false) 
+        write "True";
+     else 
+        write "False";
    }
