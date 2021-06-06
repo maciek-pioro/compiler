@@ -93,7 +93,7 @@ public abstract class Tree
         bool result = true;
         foreach(var child in children)
         {
-            result = result && child.validate();
+            result = child.validate() && result;
         }
         return result;
     }
@@ -118,12 +118,13 @@ public abstract class Tree
         return result;
     }
 
-    //public void wrapNode(int childIndex, Type outType)
-    //{
-    //    Tree wrapper = new Wrapper(outType, children[childIndex]);
-    //    children[childIndex] = wrapper;
-    //    wrapper.setParent(this);
-    //}
+    public virtual void markTypes(Type? type = null)
+    {
+        foreach(var child in children)
+        {
+            child.markTypes(type);
+        }
+    }
 
     abstract public String genCode();
 }
@@ -135,8 +136,13 @@ public class Wrapper : Tree
     public Wrapper (Type outType, Tree child, bool isExplicit = false): base()
     {
         children.Add(child);
-        type = outType;
+        //type = outType;
         this.isExplicit = isExplicit;
+    }
+
+    public override void markTypes(Type? type = null)
+    {
+        this.type = (Type) type;
     }
 
     public override string genCode()
@@ -168,7 +174,7 @@ public class Wrapper : Tree
 
     public override bool validate()
     {
-        bool result = true;
+        bool result = base.validate();
         Type inType = children[0].type;
         Type outType = type;
         switch (inType, outType)
@@ -206,7 +212,7 @@ public class Wrapper : Tree
                 }
             case (Type.Double, Type.Integer):
                 {
-                    result = isExplicit;
+                    result = isExplicit && result;
                     if (!isExplicit)
                     {
                         Console.WriteLine("Cannot convert double to integer implicitly");
@@ -214,7 +220,7 @@ public class Wrapper : Tree
                     break;
                 }
         }
-        return base.validate() && result;
+        return result;
     }
 }
 
@@ -358,20 +364,34 @@ public class DeclarationList : Tree
         return result;
     }
 
-    public override bool validate()
+    public override void markTypes(Type? type = null)
     {
-        foreach(var child in children)
+        base.markTypes(type);
+        foreach (var child in children)
         {
-            if (variables.TryGetValue(((Variable)child).name, out var variable))
-            {
-                Console.WriteLine($"variable {variable.name} already declared");
-                return false;
-            } else
+            if (!variables.TryGetValue(((Variable)child).name, out var variable))
             {
                 variables.Add(((Variable)child).name, (Variable)child);
             }
         }
-        return true;
+    }
+
+    public override bool validate()
+    {
+        var result = true;
+        var tmpVariables = new Dictionary<String, Variable>();
+        foreach(var child in children)
+        {
+            if (tmpVariables.TryGetValue(((Variable)child).name, out var variable))
+            {
+                Console.WriteLine($"variable {variable.name} already declared");
+                result = false;
+            } else
+            {
+                tmpVariables.Add(((Variable)child).name, (Variable)child);
+            }
+        }
+        return result;
     }
 
     public override List<Tree> hoistDeclarations()
@@ -397,12 +417,7 @@ public class InstructionList : Tree
 
     public override bool validate()
     {
-        bool result = true;
-        foreach (var child in children)
-        {
-            result = child.validate() && result;
-        }
-        return result;
+        return base.validate();
     }
 }
 
@@ -432,10 +447,6 @@ public class Variable : Tree
         return $"{typeConst}* %{internalIdentifier}";
     }
 
-    public override bool validate()
-    { 
-        return true;
-    }
 }
 
 public class Relation : Tree
@@ -443,15 +454,15 @@ public class Relation : Tree
     string symbol;
     string comparer;
     string operand;
+    Tree originalL, originalR;
 
-    public Relation(Tree lTree, Tree rTree, String symbol) 
+    public override void markTypes(Type? type = null)
     {
-        this.type = Type.Boolean;
-        Type generalType = TypeHelper.getMoreGeneralType(lTree.type, rTree.type);
-        children.Add(new Wrapper(generalType, lTree));
-        children.Add(new Wrapper(generalType, rTree));
-        this.symbol = symbol;
-        if (children[0].type == Type.Boolean || children[0].type == Type.Integer)
+        originalL.markTypes();
+        originalR.markTypes();
+        Type generalType = TypeHelper.getMoreGeneralType(originalL.type, originalR.type);
+        base.markTypes(generalType);
+        if (generalType == Type.Boolean || generalType == Type.Integer)
         {
             comparer = "icmp";
             switch (symbol)
@@ -503,6 +514,17 @@ public class Relation : Tree
         }
     }
 
+    public Relation(Tree lTree, Tree rTree, String symbol) 
+    {
+        originalL = lTree;
+        originalR = rTree;
+        this.symbol = symbol;
+        this.type = Type.Boolean;
+        Type generalType = TypeHelper.getMoreGeneralType(lTree.type, rTree.type);
+        children.Add(new Wrapper(generalType, lTree));
+        children.Add(new Wrapper(generalType, rTree));
+    }
+
     public override string genCode()
     {
         var result = children[0].genCode();
@@ -529,15 +551,18 @@ public class Relation : Tree
 
 public class MathOperator : Tree
 {
+    string symbol;
     string function;
+    Tree originalL, originalR;
 
-    public MathOperator(Tree lTree, Tree rTree, string symbol)
+    public override void markTypes(Type? type = null)
     {
-        Type generalType = TypeHelper.getMoreGeneralType(lTree.type, rTree.type);
+        originalL.markTypes();
+        originalR.markTypes();
+        Type generalType = TypeHelper.getMoreGeneralType(originalL.type, originalR.type);
         generalType = TypeHelper.getMoreGeneralType(Type.Integer, generalType);
-        type = generalType;
-        children.Add(new Wrapper(generalType, lTree));
-        children.Add(new Wrapper(generalType, rTree));
+        this.type = generalType;
+        base.markTypes(generalType);
         if (generalType == Type.Double)
         {
             switch (symbol)
@@ -576,6 +601,18 @@ public class MathOperator : Tree
         }
     }
 
+    public MathOperator(Tree lTree, Tree rTree, string symbol)
+    {
+        originalL = lTree;
+        originalR = rTree;
+        Type generalType = TypeHelper.getMoreGeneralType(lTree.type, rTree.type);
+        generalType = TypeHelper.getMoreGeneralType(Type.Integer, generalType);
+        type = generalType;
+        children.Add(new Wrapper(generalType, lTree));
+        children.Add(new Wrapper(generalType, rTree));
+        this.symbol = symbol;
+    }
+
     public override string genCode()
     {
         var result = children[0].genCode();
@@ -589,10 +626,13 @@ public class MathOperator : Tree
 public class Logical : Tree
 {
     string function;
+    Tree originalL, originalR;
 
     public Logical(Tree lTree, Tree rTree, string symbol)
     {
         this.type = Type.Boolean;
+        originalL = lTree;
+        originalR = rTree;
         children.Add(new Wrapper(Type.Boolean, lTree));
         children.Add(new Wrapper(Type.Boolean, rTree));
         if("&&".Equals(symbol))
@@ -602,6 +642,13 @@ public class Logical : Tree
         {
             function = "or";
         }
+    }
+
+    public override void markTypes(Type? type = null)
+    {
+        originalL.markTypes();
+        originalR.markTypes();
+        base.markTypes(Type.Boolean);
     }
 
     public override string genCode()
@@ -641,14 +688,24 @@ public class Logical : Tree
 public class Bitwise : Tree
 {
     string function;
+    Tree originalL, originalR;
 
     public Bitwise(Tree lTree, Tree rTree, string symbol)
     {
+        originalL = lTree;
+        originalR = rTree;
         children.Add(new Wrapper(Type.Integer, rTree));
         children.Add(new Wrapper(Type.Integer, lTree));
         type = Type.Integer;
         if ("|".Equals(symbol)) function = "or";
         else function = "and";
+    }
+
+    public override void markTypes(Type? type = null)
+    {
+        originalL.markTypes();
+        originalR.markTypes();
+        base.markTypes(Type.Integer);
     }
 
     public override string genCode()
@@ -663,28 +720,36 @@ public class Bitwise : Tree
 public class Unary : Tree
 {
     string symbol;
+    Tree originalChild;
 
     public Unary(Tree child, string symbol)
     {
         this.symbol = symbol;
+        originalChild = child;
+        children.Add(new Wrapper(Type.Boolean, child));
+    }
+
+    public override void markTypes(Type? type = null)
+    {
+        originalChild.markTypes();
         switch (symbol)
         {
             case "-":
                 {
-                    children.Add(new Wrapper(TypeHelper.getMoreGeneralType(Type.Integer, child.type), child));
-                    type = child.type;
+                    children[0].markTypes(TypeHelper.getMoreGeneralType(Type.Integer, originalChild.type));
+                    this.type = originalChild.type;
                     break;
                 }
             case "~":
                 {
-                    children.Add(new Wrapper(Type.Integer, child));
-                    type = Type.Integer;
+                    children[0].markTypes(Type.Integer);
+                    this.type = Type.Integer;
                     break;
                 }
             case "!":
                 {
-                    children.Add(new Wrapper(Type.Boolean, child));
-                    type = Type.Boolean;
+                    children[0].markTypes(Type.Boolean);
+                    this.type = Type.Boolean;
                     break;
                 }
         }
@@ -980,8 +1045,9 @@ public class Assign: Tree
     
     public Assign(string identifier, Tree rTree): base()
     {
+        //Type moreGeneralType = TypeHelper.getMoreGeneralType();
         this.identifier = identifier;
-        this.children.Add(rTree);
+        this.children.Add(new Wrapper(Type.Boolean, rTree));
     }
 
     public override string genCode()
@@ -990,6 +1056,16 @@ public class Assign: Tree
         var variable = getVariable(identifier);
         resultVariable = rTree.resultVariable;
         return rTree.genCode() + "\n" + $"store {rTree}, {variable}\n";
+    }
+
+    public override void markTypes(Type? type = null)
+    {
+        var variable = getVariable(identifier);
+        if(!(variable is null))
+        {
+            this.type = variable.type;
+            this.children[0].markTypes(this.type);
+        }
     }
 
     public override bool validate()
@@ -1002,7 +1078,7 @@ public class Assign: Tree
             Console.WriteLine($"Undeclared identifier: {identifier}");
             result = false;
         }
-        result = result && rTree.validate();
+        result = rTree.validate() && result;
         return result;
     }
 }
@@ -1024,6 +1100,11 @@ public class Identifier : Tree
         return $"%{resultVariable} = load {typeString}, {variable}\n";
     }
 
+    public override void markTypes(Type? type = null)
+    {
+        var variable = getVariable(identifier);
+        if (!(variable is null)) this.type = variable.type; 
+    }
 
     public override bool validate()
     {
@@ -1092,6 +1173,7 @@ public class Compiler
             return 1;
         }
         Program.setParent();
+        Program.markTypes();
         if(!Program.validate()) {
             Console.WriteLine("Errors detected :(, aborting");
             return 1;
@@ -1100,6 +1182,7 @@ public class Compiler
         Program.hoistDeclarations();
         var output = Program.genCode();
         sw.Write(output);
+        sw.WriteLine();
         sw.Close();
         source.Close();
         return 0;
