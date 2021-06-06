@@ -94,13 +94,13 @@ constant          : RealNumber { $$.tree = new Literal(Type.Double, $1.value); }
 
 leaf              : constant
                   | Ident { $$.tree = new Identifier($1.value); }
-                  | OpenPar assignment ClosePar {$$.tree = $2 .tree}
+                  | OpenPar assignment ClosePar {$$.tree = $2.tree; }
                   ;
 unary             : Minus unary {$$.tree = new Unary($2.tree, "-");}
                   | BitNot unary {$$.tree = new Unary($2.tree, "~");}
-                  | LogicalNot unary {$$.tree = new Unary($2.tree, "!");}
-                  | OpenPar Int ClosePar unary {$$.tree = new Wrapper(Type.Integer, $4.tree, true);}
-                  | OpenPar Double ClosePar unary {$$.tree = new Wrapper(Type.Double, $4.tree, true);}
+                  | LogicalNot unary {$$.tree = new Unary($2.tree, "!"); }
+                  | OpenPar Int ClosePar unary {$$.tree = new Wrapper(Type.Integer, $4.tree, true); }
+                  | OpenPar Double ClosePar unary {$$.tree = new Wrapper(Type.Double, $4.tree, true); }
                   | leaf;
 bitwise           : bitwise BitOr unary {$$.tree = new Bitwise($1.tree, $3.tree, "&"); }
                   | bitwise BitAnd unary {$$.tree = new Bitwise($1.tree, $3.tree, "|"); }
