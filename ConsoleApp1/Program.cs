@@ -108,7 +108,58 @@ public abstract class Tree
         return result;
     }
 
+    public void wrapNode(int childIndex, Type outType)
+    {
+        Tree wrapper = new Wrapper(outType, children[childIndex]);
+        children[childIndex] = wrapper;
+        wrapper.setParent(this);
+    }
+
     abstract public String genCode();
+}
+
+public class Wrapper : Tree
+{
+    bool isExplicit;
+
+    public Wrapper (Type outType, Tree child, bool isExplicit = false): base()
+    {
+        children.Add(child);
+        type = outType;
+        this.isExplicit = isExplicit;
+    }
+
+    public override string genCode()
+    {
+        Type inType = children[0].type;
+        Type outType = type;
+        switch (inType, outType)
+        {
+            case (Type.Double, Type.Integer):
+            {
+                var childCode = children[0].genCode();
+                return childCode + "\n" + $"%{resultVariable} = fptosi {children[0]} to i32";
+            }
+            case (Type.Integer, Type.Double):
+            {
+                var childCode = children[0].genCode();
+                return childCode + "\n" + $"%{resultVariable} = sitofp {children[0]} to double";
+            }
+            case (Type.Boolean, Type.Integer):
+            {
+                var childCode = children[0].genCode();
+                return childCode + "\n" + $"%{resultVariable} = select {children[0]}, i32 1, i32 0";
+            }
+        }
+        // Conversion int -> int or double -> double. Do nothing.
+        resultVariable = children[0].resultVariable;
+        return children[0].genCode();
+    }
+
+    public override bool validate()
+    {
+        return base.validate();
+    }
 }
 
 public class Program: Tree

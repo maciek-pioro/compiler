@@ -96,7 +96,6 @@ leaf              : constant
                   | Ident { $$.tree = new Identifier($1.value); }
                   | OpenPar assignment ClosePar
                   ;
-
 unary             : Minus unary 
                   | BitNot unary
                   | LogicalNot unary
@@ -112,12 +111,12 @@ multiplicative    : multiplicative Multiplies bitwise
 additive          : additive Plus multiplicative
                   | additive Minus multiplicative
                   | multiplicative;
-relation          : relation Equals additive
-                  | relation NotEquals additive
-                  | relation GT additive
-                  | relation GEQ additive
-                  | relation LT additive
-                  | relation LEQ additive
+relation          : relation Equals additive {new Relation($1.tree, $2.tree, "="); }
+                  | relation NotEquals additive {new Relation($1.tree, $2.tree, "!="); }
+                  | relation GT additive {new Relation($1.tree, $2.tree, ">"); }
+                  | relation GEQ additive {new Relation($1.tree, $2.tree, ">="); }
+                  | relation LT additive {new Relation($1.tree, $2.tree, "<"); }
+                  | relation LEQ additive {new Relation($1.tree, $2.tree, "<="); }
                   | additive;
 logical           : logical LogicalOr relation
                   | logical LogicalAnd relation
