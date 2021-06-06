@@ -163,14 +163,60 @@ public class Wrapper : Tree
                 return childCode + "\n" + $"%{resultVariable} = select {children[0]}, i32 1, i32 0\n";
             }
         }
-        // Conversion int -> int or double -> double. Do nothing.
+        // Conversion int -> int, double -> double or bool->bool. Do nothing.
         resultVariable = children[0].resultVariable;
         return children[0].genCode();
     }
 
     public override bool validate()
     {
-        return base.validate();
+        bool result = true;
+        Type inType = children[0].type;
+        Type outType = type;
+        switch (inType, outType)
+        {
+            case (Type.Boolean, Type.Double):
+                {
+                    result = false;
+                    Console.WriteLine("Cannot convert boolean to double");
+                    break;
+                }
+            case (Type.Double, Type.Boolean):
+                {
+                    result = false;
+                    Console.WriteLine("Cannot convert double to boolean");
+                    break;
+                }
+            case (Type.Integer, Type.Boolean):
+                {
+                    result = false;
+                    Console.WriteLine("Cannot convert integer to boolean");
+                    break;
+                }
+            case (Type.Boolean, Type.Integer):
+                {
+                    result = isExplicit;
+                    if(!isExplicit)
+                    {
+                        Console.WriteLine("Cannot convert boolean to integer implicitly");
+                    }
+                    break;
+                }
+            case (Type.Integer, Type.Double):
+                {
+                    break;
+                }
+            case (Type.Double, Type.Integer):
+                {
+                    result = isExplicit;
+                    if (!isExplicit)
+                    {
+                        Console.WriteLine("Cannot convert double to integer implicitly");
+                    }
+                    break;
+                }
+        }
+        return base.validate() && result;
     }
 }
 
