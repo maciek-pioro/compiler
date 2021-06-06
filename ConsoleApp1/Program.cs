@@ -138,17 +138,17 @@ public class Wrapper : Tree
             case (Type.Double, Type.Integer):
             {
                 var childCode = children[0].genCode();
-                return childCode + "\n" + $"%{resultVariable} = fptosi {children[0]} to i32";
+                return childCode + "\n" + $"%{resultVariable} = fptosi {children[0]} to i32\n";
             }
             case (Type.Integer, Type.Double):
             {
                 var childCode = children[0].genCode();
-                return childCode + "\n" + $"%{resultVariable} = sitofp {children[0]} to double";
+                return childCode + "\n" + $"%{resultVariable} = sitofp {children[0]} to double\n";
             }
             case (Type.Boolean, Type.Integer):
             {
                 var childCode = children[0].genCode();
-                return childCode + "\n" + $"%{resultVariable} = select {children[0]}, i32 1, i32 0";
+                return childCode + "\n" + $"%{resultVariable} = select {children[0]}, i32 1, i32 0\n";
             }
         }
         // Conversion int -> int or double -> double. Do nothing.
@@ -382,6 +382,97 @@ public class Variable : Tree
     }
 }
 
+public class Relation : Tree
+{
+    string symbol;
+    string comparer;
+    string operand;
+
+    public Relation(Tree lTree, Tree rTree, String symbol) 
+    {
+        this.type = Type.Boolean;
+        children.Add(lTree);
+        children.Add(rTree);
+        this.symbol = symbol;
+    }
+
+    public override string genCode()
+    {
+        var result = children[0].genCode();
+        result += children[1].genCode();
+        result += $"%{resultVariable} = {comparer} {operand} {children[0].type.ToLLVMString()} %{children[0].resultVariable}, %{children[1].resultVariable}\n";
+        return result;
+    }
+
+    public override bool validate()
+    {
+        var result = base.validate();
+        if(children[0].type == Type.Boolean && children[1].type == Type.Boolean)
+        {
+            if(!"==".Equals(symbol) && !"!=".Equals(symbol))
+            {
+                result = false;
+            }
+        }
+        if ((children[0].type == Type.Double || children[1].type == Type.Double))
+        {
+            wrapNode(0, Type.Double);
+            wrapNode(1, Type.Double);
+        }
+        result = base.validate() && result;
+        if(children[0].type == Type.Boolean || children[0].type == Type.Integer)
+        {
+            comparer = "icmp";
+            switch(symbol)
+            {
+                case "==":
+                    operand = "eq";
+                    break;
+                case "!=":
+                    operand = "ne";
+                    break;
+                case ">":
+                    operand = "sgt";
+                    break;
+                case ">=":
+                    operand = "sge";
+                    break;
+                case "<":
+                    operand = "slt";
+                    break;
+                case "<=":
+                    operand = "sle";
+                    break;
+            }
+        }
+        else
+        {
+            comparer = "fcmp";
+            switch (symbol)
+            {
+                case "==":
+                    operand = "oeq";
+                    break;
+                case "!=":
+                    operand = "one";
+                    break;
+                case ">":
+                    operand = "ogt";
+                    break;
+                case ">=":
+                    operand = "oge";
+                    break;
+                case "<":
+                    operand = "olt";
+                    break;
+                case "<=":
+                    operand = "ole";
+                    break;
+            }
+        }
+        return result;
+    }
+}
 public class Write : Tree
 {
     private bool isHex;
@@ -747,10 +838,6 @@ public class Compiler
         sw.AutoFlush = true;
         parser.Parse();
         var Program = parser.head;
-        //if (!Program.validate())
-        //{
-        //    return 1;
-        //}
         Program.setParent();
         if(!Program.validate()) {
             Console.WriteLine("Errors detected :(, aborting");

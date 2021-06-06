@@ -1,9 +1,24 @@
 program 
 {
-   bool i;
-   i = true;
-   while(i) {
-      return;
+   int a, b;
+   double c, d;
+   a = 1;
+   b = 3;
+   c = 1.0;
+   d = 3.0;
+   if(a == b) {
+      write "a==b";
    }
-   write i;
+   if(a != b) {
+      write "a!=b";
+   }
+   if(a == c) {
+      write "a==c";
+   }
+   if(c != d) {
+      write "c!=d";
+   }
+   if(a == d) {
+      write "a==d";
+   }
 }

@@ -111,12 +111,12 @@ multiplicative    : multiplicative Multiplies bitwise
 additive          : additive Plus multiplicative
                   | additive Minus multiplicative
                   | multiplicative;
-relation          : relation Equals additive {new Relation($1.tree, $2.tree, "="); }
-                  | relation NotEquals additive {new Relation($1.tree, $2.tree, "!="); }
-                  | relation GT additive {new Relation($1.tree, $2.tree, ">"); }
-                  | relation GEQ additive {new Relation($1.tree, $2.tree, ">="); }
-                  | relation LT additive {new Relation($1.tree, $2.tree, "<"); }
-                  | relation LEQ additive {new Relation($1.tree, $2.tree, "<="); }
+relation          : relation Equals additive {$$.tree = new Relation($1.tree, $3.tree, "=="); }
+                  | relation NotEquals additive {$$.tree = new Relation($1.tree, $3.tree, "!="); }
+                  | relation GT additive {$$.tree = new Relation($1.tree, $3.tree, ">"); }
+                  | relation GEQ additive {$$.tree = new Relation($1.tree, $3.tree, ">="); }
+                  | relation LT additive {$$.tree = new Relation($1.tree, $3.tree, "<"); }
+                  | relation LEQ additive {$$.tree = new Relation($1.tree, $3.tree, "<="); }
                   | additive;
 logical           : logical LogicalOr relation
                   | logical LogicalAnd relation
