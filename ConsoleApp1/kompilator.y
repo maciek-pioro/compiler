@@ -65,7 +65,7 @@ identifier_list   : Ident {
 instruction       : assignment Semicolon { $$.tree = $1.tree; }
                   | If OpenPar assignment ClosePar instruction {$$.tree = new If($3.tree, $5.tree, null);}
                   | If OpenPar assignment ClosePar instruction Else instruction {$$.tree = new If($3.tree, $5.tree, $7.tree);}
-                  | While OpenPar assignment ClosePar instruction
+                  | While OpenPar assignment ClosePar instruction {$$.tree = new While($3.tree, $5.tree);}
                   | OpenBra block_inside CloseBra {$$.tree = $2.tree;}
                   | Read Ident Comma Hex Semicolon {
                     $$.tree = new Read($2.value, true);

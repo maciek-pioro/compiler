@@ -501,56 +501,51 @@ public class If : Tree
 
     public override bool validate()
     {
-        bool result = true;
+        bool result = base.validate();
         if(children[0].type!=Type.Boolean)
         {
             Console.WriteLine("If-condition must be a boolean");
             result = false;
         }
-        return base.validate() && result;
+        return result;
     }
 
 }
 
-//public class While : Tree
-//{
-//    public While(Tree condition, Tree body) : base()
-//    {
-//        children.Add(condition);
-//        children.Add(body);
-//    }
+public class While : Tree
+{
+    public While(Tree condition, Tree body) : base()
+    {
+        children.Add(condition);
+        children.Add(body);
+    }
 
-//    public override string genCode()
-//    {
-//        var conditionCode = children[0].genCode();
-//        var result = $"br label while_start_{uniqueId}";
-//        result += $"while_start_{uniqueId}:";
-//        result += $"br {children[0]}, label %if_true_{this.uniqueId}, label %if_false_{this.uniqueId} \n";
-//        result += $"if_true_{this.uniqueId}:\n";
-//        result += children[1].genCode();
-//        result += $"br label %if_end_{this.uniqueId}\n";
-//        result += $"if_false_{this.uniqueId}:\n";
-//        if (hasElse)
-//        {
-//            result += children[2].genCode();
-//        }
-//        result += $"br label %if_end_{this.uniqueId}\n";
-//        result += $"if_end_{this.uniqueId}: \n";
-//        return result;
-//    }
+    public override string genCode()
+    {
+        var conditionCode = children[0].genCode();
+        var result = $"br label %while_start_{uniqueId}\n";
+        result += $"while_start_{uniqueId}:\n";
+        result += conditionCode;
+        result += $"br {children[0]}, label %while_true_{this.uniqueId}, label %while_end_{this.uniqueId} \n";
+        result += $"while_true_{this.uniqueId}:\n";
+        result += children[1].genCode();
+        result += $"br label %while_start_{this.uniqueId}\n";
+        result += $"while_end_{this.uniqueId}: \n";
+        return result;
+    }
 
-//    public override bool validate()
-//    {
-//        bool result = true;
-//        if(children[0].type!=Type.Boolean)
-//        {
-//            Console.WriteLine("If-condition must be a boolean");
-//            result = false;
-//        }
-//        return base.validate() && result;
-//    }
+    public override bool validate()
+    {
+        bool result = base.validate();
+        if (children[0].type != Type.Boolean)
+        {
+            Console.WriteLine("While-condition must be a boolean");
+            result = false;
+        }
+        return result;
+    }
 
-//}
+}
 public class StringLiteral : Tree
 {
     private static int stringCounter = 0;
@@ -635,7 +630,7 @@ public class Identifier : Tree
         string typeString = type.ToLLVMString();
         Console.WriteLine(this.type);
         Console.WriteLine("asdasdasdasd");
-        return $"%{resultVariable} = load {typeString}, {variable}";
+        return $"%{resultVariable} = load {typeString}, {variable}\n";
     }
 
 
