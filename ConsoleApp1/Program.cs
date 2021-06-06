@@ -564,6 +564,68 @@ public class Bitwise : Tree
     }
 }
 
+public class Unary : Tree
+{
+    string symbol;
+
+    public Unary(Tree child, string symbol)
+    {
+        this.symbol = symbol;
+        switch (symbol)
+        {
+            case "-":
+                {
+                    children.Add(new Wrapper(TypeHelper.getMoreGeneralType(Type.Integer, child.type), child));
+                    type = child.type;
+                    break;
+                }
+            case "~":
+                {
+                    children.Add(new Wrapper(Type.Integer, child));
+                    type = Type.Integer;
+                    break;
+                }
+            case "!":
+                {
+                    children.Add(new Wrapper(Type.Boolean, child));
+                    type = Type.Boolean;
+                    break;
+                }
+        }
+    }
+
+    public override string genCode()
+    {
+        var result = children[0].genCode();
+        switch (symbol)
+        {
+            case "-":
+                {
+                    if (type == Type.Double)
+                    {
+                        result += "\n" + $"%{resultVariable} = fneg {children[0]}";
+                    }
+                    else
+                    {
+                        result += "\n" + $"%{resultVariable} = sub i32 0, %{children[0].resultVariable}";
+                    }
+                    break;
+                }
+            case "~":
+                {
+                    result += "\n" + $"%{resultVariable} = xor i32 4294967295, %{children[0].resultVariable}";
+                    break;
+                }
+            case "!":
+                {
+                    result += "\n" + $"%{resultVariable} = select {children[0]}, i1 0, i1 1";
+                    break;
+                }
+        }
+        return result;
+    }
+}
+
 public class Write : Tree
 {
     private bool isHex;
