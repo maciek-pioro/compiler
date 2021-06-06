@@ -13,7 +13,7 @@ String              \"[^"]*\"
 Whitespace          [ \t\n\f\r]
 
 %%
-{Comment}           { Console.Write("\n"); }
+{Comment}           {  }
 "program"           { yylval.lineNumber=yyline; return (int)Tokens.Program; }
 "if"                { yylval.lineNumber=yyline; return (int)Tokens.If; }
 "else"              { yylval.lineNumber=yyline; return (int)Tokens.Else; }

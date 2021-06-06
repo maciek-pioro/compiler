@@ -131,35 +131,4 @@ assignment        : Ident Assign assignment {
 %%
 public Parser(Scanner scanner) : base(scanner) { }
 public Tree head;
-/* private char BinaryOpGenCode(Tokens t, char type1, char type2)
-    {
-    char type = ( type1=='i' && type2=='i' ) ? 'i' : 'r' ;
-    if ( type1!=type )
-        {
-        Compiler.EmitCode("sldloc temp");
-        }tloc temp");
-        Compiler.EmitCode("conv.r8");
-        Compiler.EmitCode("
-    if ( type2!=type )
-        Compiler.EmitCode("conv.r8");
-    switch ( t )
-        {
-        case Tokens.Plus:
-            Compiler.EmitCode("add");
-            break;
-        case Tokens.Minus:
-            Compiler.EmitCode("sub");
-            break;
-        case Tokens.Multiplies:
-            Compiler.EmitCode("mul");
-            break;
-        case Tokens.Divides:
-            Compiler.EmitCode("div");
-            break;
-        default:
-            Console.WriteLine($"  line {lineno,3}:  internal gencode error");
-            ++Compiler.errors;
-            break;
-        }
-    return type;
-    } */
+

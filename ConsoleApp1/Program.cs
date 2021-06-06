@@ -1082,10 +1082,15 @@ public class Compiler
         Scanner scanner = new Scanner(source);
         Parser parser = new Parser(scanner);
         Console.WriteLine();
-        sw = new StreamWriter(Console.OpenStandardOutput());
+        sw = new StreamWriter(file + ".ll");
         sw.AutoFlush = true;
         parser.Parse();
         var Program = parser.head;
+        if(Program is null)
+        {
+            Console.WriteLine("Syntax error");
+            return 1;
+        }
         Program.setParent();
         if(!Program.validate()) {
             Console.WriteLine("Errors detected :(, aborting");
@@ -1093,44 +1098,15 @@ public class Compiler
         }
         Program.hoistStrings();
         Program.hoistDeclarations();
-        Console.WriteLine(parser.head.genCode());
+        var output = Program.genCode();
+        sw.Write(output);
         sw.Close();
         source.Close();
-        if (errors == 0)
-            //Console.WriteLine("  compilation successful\n");
-            Console.WriteLine("\n");
-        else
-                {
-            Console.WriteLine($"\n  {errors} errors detected\n");
-            File.Delete(file + ".il");
-        }
-
-        Console.ReadKey();
-
-        return errors == 0 ? 0 : 2;
+        return 0;
     }
 
-    public static void EmitCode(string instr = null)
-    {
-        sw.WriteLine(instr);
-    }
-
-    public static void EmitCode(string instr, params object[] args)
-    {
-        sw.WriteLine(instr, args);
-    }
 
     private static StreamWriter sw;
-
-    private static void GenProlog()
-    {
-        EmitCode("define void @main() {");
-    }
-
-    private static void GenEpilog()
-    {
-        EmitCode("}");
-    }
 
 }
 
