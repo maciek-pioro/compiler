@@ -3,7 +3,7 @@ program
    bool i;
    i = true;
    while(i) {
-      write "X";
+      return;
    }
    write i;
 }

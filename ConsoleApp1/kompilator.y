@@ -14,11 +14,6 @@
 }
 %token IntNumber RealNumber Plus String Ident Program If Else While Read Write Return Int Double Bool True False Hex Equals NotEquals GEQ LEQ LogicalOr LogicalAnd Assign GT LT Comma LogicalNot BitAnd BitOr BitNot Minus Multiplies Divides OpenPar ClosePar OpenBra CloseBra Semicolon Eof Error Endl
 
-/* %type <type> declaration instruction identifier_list type instruction_list */
-/* %type <val>  constant expression */
-/* %type <Tree> declaration instruction type instruction_list constant expression */
- /* exp term factor */
-
 %%
 
 
@@ -26,8 +21,7 @@ start             : Program
                     OpenBra 
                     block_inside
                     CloseBra 
-                    EOF 
-                    {
+                    EOF {
                       head = new Program($3.tree);
                     }
                   ;
@@ -35,29 +29,29 @@ start             : Program
 block_inside      : declaration_list instruction_list {$$.tree = new Block($1.tree, $2.tree); } ;
 
 declaration_list  : declaration declaration_list {
-  $$.tree = $2.tree;
-  $$.tree.children.AddRange($1.tree.children);
-}
+                      $$.tree = $2.tree;
+                      $$.tree.children.AddRange($1.tree.children);
+                  }
                   | {
-                    $$.tree = new DeclarationList();
+                      $$.tree = new DeclarationList();
                   }
                   ;
 
 declaration       : type identifier_list Semicolon  {
-  $$.tree = new DeclarationList();
-  Type type = $1.type;
-  foreach(string name in $2.stringList) {
-    $$.tree.children.Add(new Variable(type, name));
-  }
-};
+                      $$.tree = new DeclarationList();
+                      Type type = $1.type;
+                      foreach(string name in $2.stringList) {
+                        $$.tree.children.Add(new Variable(type, name));
+                      }
+                  };
 
 identifier_list   : Ident {
-  $$.stringList = new List<string>();
-  $$.stringList.Add($1.value);
-}
+                      $$.stringList = new List<string>();
+                      $$.stringList.Add($1.value);
+                  }
                   | Ident Comma identifier_list {
-                    $3.stringList.Add($1.value);
-                    $$.stringList = $3.stringList;
+                      $3.stringList.Add($1.value);
+                      $$.stringList = $3.stringList;
                   }
                   ;
 
@@ -67,32 +61,21 @@ instruction       : assignment Semicolon { $$.tree = $1.tree; }
                   | If OpenPar assignment ClosePar instruction Else instruction {$$.tree = new If($3.tree, $5.tree, $7.tree);}
                   | While OpenPar assignment ClosePar instruction {$$.tree = new While($3.tree, $5.tree);}
                   | OpenBra block_inside CloseBra {$$.tree = $2.tree;}
-                  | Read Ident Comma Hex Semicolon {
-                    $$.tree = new Read($2.value, true);
-                  }
-                  | Read Ident Semicolon {
-                    $$.tree = new Read($2.value);
-                  }
-                  | Write assignment Comma Hex Semicolon {
-                    $$.tree = new Write($2.tree, true);
-                  }
-                  | Write assignment Semicolon {
-                    $$.tree = new Write($2.tree);
-                  }
-                  | Write String Semicolon {
-                    $$.tree = new Write(new StringLiteral($2.value));
-                  }
-                  | Return Semicolon
+                  | Read Ident Comma Hex Semicolon { $$.tree = new Read($2.value, true); }
+                  | Read Ident Semicolon { $$.tree = new Read($2.value); }
+                  | Write assignment Comma Hex Semicolon { $$.tree = new Write($2.tree, true); }
+                  | Write assignment Semicolon { $$.tree = new Write($2.tree); }
+                  | Write String Semicolon { $$.tree = new Write(new StringLiteral($2.value)); }
+                  | Return Semicolon { $$.tree = new Return(); }
                   ;
-    /* call i32 (i8*, ...) @printf(i8* bitcast ([19 x i8]* @prompt to i8*)) */
 
 
 instruction_list  : instruction_list instruction {
-                    $$.tree = $1.tree;
-                    $$.tree.children.Add($2.tree);
-}
+                      $$.tree = $1.tree;
+                      $$.tree.children.Add($2.tree);
+                  }
                   | {
-                    $$.tree = new InstructionList();
+                      $$.tree = new InstructionList();
                   }
                   ;
 
@@ -140,8 +123,8 @@ logical           : logical LogicalOr relation
                   | logical LogicalAnd relation
                   | relation;
 assignment        : Ident Assign assignment {
-  $$.tree = new Assign($1.value, $3.tree);
-}
+                    $$.tree = new Assign($1.value, $3.tree);
+                  }
                   | logical;
 
 

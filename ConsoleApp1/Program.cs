@@ -647,6 +647,16 @@ public class Identifier : Tree
     }
 }
 
+public class Return : Tree
+{
+    public Return() : base() { }
+
+    override public string genCode()
+    {
+        return "ret i32 0\n";
+    }
+}
+
 
 public class Compiler
 {
@@ -654,13 +664,6 @@ public class Compiler
     public static int errors = 0;
 
     public static List<string> source;
-
-    //public static Dictionary<String, Tree> variables;
-    //public static List<Identifier> identifiers1;
-    //public static List<Identifier> identifiers2;
-
-    // arg[0] określa plik źródłowy
-    // pozostałe argumenty są ignorowane
     public static int Main(string[] args)
     {
         string file;
