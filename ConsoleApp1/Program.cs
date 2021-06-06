@@ -66,10 +66,8 @@ public abstract class Tree
 
     public Variable getVariable(string identifier)
     {
-        Console.WriteLine(this.GetType());
         if (variables.TryGetValue(identifier, out Variable variable))
         {
-            Console.WriteLine($"Found {identifier}");
             return variable;
         }
         return parent?.getVariable(identifier);
@@ -594,6 +592,7 @@ public class Logical : Tree
 
     public Logical(Tree lTree, Tree rTree, string symbol)
     {
+        this.type = Type.Boolean;
         children.Add(new Wrapper(Type.Boolean, lTree));
         children.Add(new Wrapper(Type.Boolean, rTree));
         if("&&".Equals(symbol))
@@ -612,26 +611,28 @@ public class Logical : Tree
         if (function.Equals("or"))
         {
             return
+                $"br label %logical_start_{uniqueId}\n" +
                 $"logical_start_{uniqueId}:\n" +
                 lTreeCode +
                 $"br {children[0]}, label %logical_end_{uniqueId}, label %logical_right_{uniqueId}\n" +
                 $"logical_right_{uniqueId}:\n" +
                 rTreeCode +
-                $"br logical_end_{uniqueId}:\n" +
+                $"br label %logical_end_{uniqueId}\n" +
                 $"logical_end_{uniqueId}:\n" +
-                $"%{resultVariable} = phi i1 [true, %logical_start_{uniqueId}], [%{children[1].resultVariable}, %logical_start_{uniqueId}]";
+                $"%{resultVariable} = phi i1 [true, %logical_start_{uniqueId}], [%{children[1].resultVariable}, %logical_right_{uniqueId}]\n";
         }
         else
         {
             return
+                $"br label %logical_start_{uniqueId}\n" +
                 $"logical_start_{uniqueId}:\n" +
                 lTreeCode +
                 $"br {children[0]}, label %logical_right_{uniqueId}, label %logical_end_{uniqueId}\n" +
                 $"logical_right_{uniqueId}:\n" +
                 rTreeCode +
-                $"br logical_end_{uniqueId}:\n" +
+                $"br label %logical_end_{uniqueId}\n" +
                 $"logical_end_{uniqueId}:\n" +
-                $"%{resultVariable} = phi i1 [false, %logical_start_{uniqueId}], [%{children[1].resultVariable}, %logical_start_{uniqueId}]";
+                $"%{resultVariable} = phi i1 [false, %logical_start_{uniqueId}], [%{children[1].resultVariable}, %logical_right_{uniqueId}]\n";
         }
     }
 
@@ -717,7 +718,7 @@ public class Unary : Tree
                     break;
                 }
         }
-        return result;
+        return result + "\n";
     }
 }
 
@@ -1020,8 +1021,6 @@ public class Identifier : Tree
         var variable = getVariable(identifier);
         Type type = variable.type;
         string typeString = type.ToLLVMString();
-        Console.WriteLine(this.type);
-        Console.WriteLine("asdasdasdasd");
         return $"%{resultVariable} = load {typeString}, {variable}\n";
     }
 
@@ -1060,7 +1059,6 @@ public class Compiler
     {
         string file;
         FileStream source;
-        Console.WriteLine("\nSingle-Pass CIL Code Generator for Multiline Calculator - Gardens Point");
         if (args.Length >= 1)
             file = args[0];
         else

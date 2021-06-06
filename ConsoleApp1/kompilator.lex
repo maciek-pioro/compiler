@@ -9,7 +9,7 @@ Ident               [a-zA-Z][a-zA-Z0-9]*
 // Ident               (x|y|a)
 // PrintErr            "print"("@"|"$"|[a-z0-9])[a-z0-9]*
 Comment             \/\/.*
-String              \".*\"
+String              \"[^"]*\"
 Whitespace          [ \t\n\f\r]
 
 %%
