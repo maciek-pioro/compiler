@@ -13,6 +13,18 @@ public enum Type
     String
 }
 
+public class TypeHelper
+{
+    private TypeHelper() { }
+    
+    public static Type getMoreGeneralType(Type l, Type r)
+    {
+        if (l == Type.Double || r == Type.Double) return Type.Double;
+        if (l == Type.Integer || r == Type.Integer) return Type.Integer;
+        return Type.Boolean;
+    }
+}
+
 public static class TypeStringer
 {
     public static string ToLLVMString(this Type type)
@@ -108,12 +120,12 @@ public abstract class Tree
         return result;
     }
 
-    public void wrapNode(int childIndex, Type outType)
-    {
-        Tree wrapper = new Wrapper(outType, children[childIndex]);
-        children[childIndex] = wrapper;
-        wrapper.setParent(this);
-    }
+    //public void wrapNode(int childIndex, Type outType)
+    //{
+    //    Tree wrapper = new Wrapper(outType, children[childIndex]);
+    //    children[childIndex] = wrapper;
+    //    wrapper.setParent(this);
+    //}
 
     abstract public String genCode();
 }
@@ -391,39 +403,14 @@ public class Relation : Tree
     public Relation(Tree lTree, Tree rTree, String symbol) 
     {
         this.type = Type.Boolean;
-        children.Add(lTree);
-        children.Add(rTree);
+        Type generalType = TypeHelper.getMoreGeneralType(lTree.type, rTree.type);
+        children.Add(new Wrapper(generalType, lTree));
+        children.Add(new Wrapper(generalType, rTree));
         this.symbol = symbol;
-    }
-
-    public override string genCode()
-    {
-        var result = children[0].genCode();
-        result += children[1].genCode();
-        result += $"%{resultVariable} = {comparer} {operand} {children[0].type.ToLLVMString()} %{children[0].resultVariable}, %{children[1].resultVariable}\n";
-        return result;
-    }
-
-    public override bool validate()
-    {
-        var result = base.validate();
-        if(children[0].type == Type.Boolean && children[1].type == Type.Boolean)
-        {
-            if(!"==".Equals(symbol) && !"!=".Equals(symbol))
-            {
-                result = false;
-            }
-        }
-        if ((children[0].type == Type.Double || children[1].type == Type.Double))
-        {
-            wrapNode(0, Type.Double);
-            wrapNode(1, Type.Double);
-        }
-        result = base.validate() && result;
-        if(children[0].type == Type.Boolean || children[0].type == Type.Integer)
+        if (children[0].type == Type.Boolean || children[0].type == Type.Integer)
         {
             comparer = "icmp";
-            switch(symbol)
+            switch (symbol)
             {
                 case "==":
                     operand = "eq";
@@ -470,9 +457,113 @@ public class Relation : Tree
                     break;
             }
         }
+    }
+
+    public override string genCode()
+    {
+        var result = children[0].genCode();
+        result += children[1].genCode();
+        result += $"%{resultVariable} = {comparer} {operand} {children[0].type.ToLLVMString()} %{children[0].resultVariable}, %{children[1].resultVariable}\n";
+        return result;
+    }
+
+    public override bool validate()
+    {
+        bool result = true;
+        if (children[0].type == Type.Boolean && children[1].type == Type.Boolean)
+        {
+            if (!"==".Equals(symbol) && !"!=".Equals(symbol))
+            {
+                Console.WriteLine($"Operator {symbol} can only be used with numeric types");
+                result = false;
+            }
+        }
+        result = base.validate() && result;
         return result;
     }
 }
+
+public class MathOperator : Tree
+{
+    string function;
+
+    public MathOperator(Tree lTree, Tree rTree, string symbol)
+    {
+        Type generalType = TypeHelper.getMoreGeneralType(lTree.type, rTree.type);
+        generalType = TypeHelper.getMoreGeneralType(Type.Integer, generalType);
+        type = generalType;
+        children.Add(new Wrapper(generalType, lTree));
+        children.Add(new Wrapper(generalType, rTree));
+        if (generalType == Type.Double)
+        {
+            switch (symbol)
+            {
+                case "+":
+                    function = "fadd";
+                    break;
+                case "-":
+                    function = "fsub";
+                    break;
+                case "*":
+                    function = "fmul";
+                    break;
+                case "/":
+                    function = "fdiv";
+                    break;
+            }
+        }
+        else
+        {
+            switch (symbol)
+            {
+                case "+":
+                    function = "add";
+                    break;
+                case "-":
+                    function = "sub";
+                    break;
+                case "*":
+                    function = "mul";
+                    break;
+                case "/":
+                    function = "sdiv";
+                    break;
+            }
+        }
+    }
+
+    public override string genCode()
+    {
+        var result = children[0].genCode();
+        result += children[1].genCode();
+        result += $"%{resultVariable} = {function} {children[0].type.ToLLVMString()} %{children[0].resultVariable}, %{children[1].resultVariable}\n";
+        return result;
+    }
+
+}
+
+public class Bitwise : Tree
+{
+    string function;
+
+    public Bitwise(Tree lTree, Tree rTree, string symbol)
+    {
+        children.Add(new Wrapper(Type.Integer, rTree));
+        children.Add(new Wrapper(Type.Integer, lTree));
+        type = Type.Integer;
+        if ("|".Equals(symbol)) function = "or";
+        else function = "and";
+    }
+
+    public override string genCode()
+    {
+        var result = children[0].genCode();
+        result += children[1].genCode();
+        result += $"%{resultVariable} = {function} i32 %{children[0].resultVariable}, %{children[1].resultVariable}\n";
+        return result;
+    }
+}
+
 public class Write : Tree
 {
     private bool isHex;

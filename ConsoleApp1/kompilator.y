@@ -94,7 +94,7 @@ constant          : RealNumber { $$.tree = new Literal(Type.Double, $1.value); }
 
 leaf              : constant
                   | Ident { $$.tree = new Identifier($1.value); }
-                  | OpenPar assignment ClosePar
+                  | OpenPar assignment ClosePar {$$.tree = $2 .tree}
                   ;
 unary             : Minus unary 
                   | BitNot unary
@@ -102,14 +102,14 @@ unary             : Minus unary
                   | OpenPar Int ClosePar unary
                   | OpenPar Double ClosePar unary
                   | leaf;
-bitwise           : bitwise BitOr unary
-                  | bitwise BitAnd unary
+bitwise           : bitwise BitOr unary {$$.tree = new Bitwise($1.tree, $3.tree, "&"); }
+                  | bitwise BitAnd unary {$$.tree = new Bitwise($1.tree, $3.tree, "|"); }
                   | unary;
-multiplicative    : multiplicative Multiplies bitwise
-                  | multiplicative Divides bitwise
+multiplicative    : multiplicative Multiplies bitwise {$$.tree = new MathOperator($1.tree, $3.tree, "*"); }
+                  | multiplicative Divides bitwise {$$.tree = new MathOperator($1.tree, $3.tree, "/"); }
                   | bitwise;
-additive          : additive Plus multiplicative
-                  | additive Minus multiplicative
+additive          : additive Plus multiplicative {$$.tree = new MathOperator($1.tree, $3.tree, "+"); }
+                  | additive Minus multiplicative {$$.tree = new MathOperator($1.tree, $3.tree, "-"); }
                   | multiplicative;
 relation          : relation Equals additive {$$.tree = new Relation($1.tree, $3.tree, "=="); }
                   | relation NotEquals additive {$$.tree = new Relation($1.tree, $3.tree, "!="); }
