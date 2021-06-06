@@ -118,8 +118,8 @@ relation          : relation Equals additive {$$.tree = new Relation($1.tree, $3
                   | relation LT additive {$$.tree = new Relation($1.tree, $3.tree, "<"); }
                   | relation LEQ additive {$$.tree = new Relation($1.tree, $3.tree, "<="); }
                   | additive;
-logical           : logical LogicalOr relation
-                  | logical LogicalAnd relation
+logical           : logical LogicalOr relation {$$.tree = new Logical($1.tree, $3.tree, "||"); }
+                  | logical LogicalAnd relation {$$.tree = new Logical($1.tree, $3.tree, "&&"); }
                   | relation;
 assignment        : Ident Assign assignment {
                     $$.tree = new Assign($1.value, $3.tree);

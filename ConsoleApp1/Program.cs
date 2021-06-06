@@ -542,6 +542,55 @@ public class MathOperator : Tree
 
 }
 
+public class Logical : Tree
+{
+    string function;
+
+    public Logical(Tree lTree, Tree rTree, string symbol)
+    {
+        children.Add(new Wrapper(Type.Boolean, lTree));
+        children.Add(new Wrapper(Type.Boolean, rTree));
+        if("&&".Equals(symbol))
+        {
+            function = "and";
+        } else
+        {
+            function = "or";
+        }
+    }
+
+    public override string genCode()
+    {
+        var lTreeCode = children[0].genCode();
+        var rTreeCode = children[1].genCode();
+        if (function.Equals("or"))
+        {
+            return
+                $"logical_start_{uniqueId}:\n" +
+                lTreeCode +
+                $"br {children[0]}, label %logical_end_{uniqueId}, label %logical_right_{uniqueId}\n" +
+                $"logical_right_{uniqueId}:\n" +
+                rTreeCode +
+                $"br logical_end_{uniqueId}:\n" +
+                $"logical_end_{uniqueId}:\n" +
+                $"%{resultVariable} = phi i1 [true, %logical_start_{uniqueId}], [%{children[1].resultVariable}, %logical_start_{uniqueId}]";
+        }
+        else
+        {
+            return
+                $"logical_start_{uniqueId}:\n" +
+                lTreeCode +
+                $"br {children[0]}, label %logical_right_{uniqueId}, label %logical_end_{uniqueId}\n" +
+                $"logical_right_{uniqueId}:\n" +
+                rTreeCode +
+                $"br logical_end_{uniqueId}:\n" +
+                $"logical_end_{uniqueId}:\n" +
+                $"%{resultVariable} = phi i1 [false, %logical_start_{uniqueId}], [%{children[1].resultVariable}, %logical_start_{uniqueId}]";
+        }
+    }
+
+}
+
 public class Bitwise : Tree
 {
     string function;
@@ -698,6 +747,7 @@ public class Write : Tree
     }
 
 }
+
 public class Read : Tree
 {
     private Variable variable;
@@ -841,6 +891,7 @@ public class While : Tree
     }
 
 }
+
 public class StringLiteral : Tree
 {
     private static int stringCounter = 0;
