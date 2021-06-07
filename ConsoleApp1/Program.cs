@@ -136,13 +136,14 @@ public class Wrapper : Tree
     public Wrapper (Type outType, Tree child, bool isExplicit = false): base()
     {
         children.Add(child);
-        //type = outType;
+        type = outType;
         this.isExplicit = isExplicit;
     }
 
     public override void markTypes(Type? type = null)
     {
-        this.type = (Type) type;
+        if (!isExplicit) this.type = (Type)type;
+        else children[0].markTypes(this.type);
     }
 
     public override string genCode()
@@ -1042,9 +1043,11 @@ public class StringLiteral : Tree
 public class Assign: Tree
 {
     string identifier;
+    Tree originalChild;
     
     public Assign(string identifier, Tree rTree): base()
     {
+        originalChild = rTree;
         //Type moreGeneralType = TypeHelper.getMoreGeneralType();
         this.identifier = identifier;
         this.children.Add(new Wrapper(Type.Boolean, rTree));
@@ -1060,11 +1063,12 @@ public class Assign: Tree
 
     public override void markTypes(Type? type = null)
     {
+        originalChild.markTypes();
         var variable = getVariable(identifier);
         if(!(variable is null))
         {
             this.type = variable.type;
-            this.children[0].markTypes(this.type);
+            base.markTypes(this.type);
         }
     }
 

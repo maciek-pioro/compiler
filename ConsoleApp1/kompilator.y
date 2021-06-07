@@ -102,8 +102,8 @@ unary             : Minus unary {$$.tree = new Unary($2.tree, "-");}
                   | OpenPar Int ClosePar unary {$$.tree = new Wrapper(Type.Integer, $4.tree, true); }
                   | OpenPar Double ClosePar unary {$$.tree = new Wrapper(Type.Double, $4.tree, true); }
                   | leaf;
-bitwise           : bitwise BitOr unary {$$.tree = new Bitwise($1.tree, $3.tree, "&"); }
-                  | bitwise BitAnd unary {$$.tree = new Bitwise($1.tree, $3.tree, "|"); }
+bitwise           : bitwise BitOr unary {$$.tree = new Bitwise($1.tree, $3.tree, "|"); }
+                  | bitwise BitAnd unary {$$.tree = new Bitwise($1.tree, $3.tree, "&"); }
                   | unary;
 multiplicative    : multiplicative Multiplies bitwise {$$.tree = new MathOperator($1.tree, $3.tree, "*"); }
                   | multiplicative Divides bitwise {$$.tree = new MathOperator($1.tree, $3.tree, "/"); }
