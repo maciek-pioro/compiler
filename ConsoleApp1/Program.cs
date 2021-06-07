@@ -1065,8 +1065,10 @@ public class Assign: Tree
     {
         Tree rTree = children[0];
         var variable = getVariable(identifier);
-        resultVariable = rTree.resultVariable;
-        return rTree.genCode() + "\n" + $"store {rTree}, {variable}\n";
+        //resultVariable = rTree.resultVariable;
+        return rTree.genCode() + "\n" 
+            + $"store {rTree}, {variable}\n"
+            + $"%{this.resultVariable} = load {this.type.ToLLVMString()}, {variable}\n";
     }
 
     public override void markTypes(Type? type = null)
