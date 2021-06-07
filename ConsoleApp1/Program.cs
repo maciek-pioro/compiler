@@ -200,7 +200,7 @@ public class Wrapper : Tree
                 }
             case (Type.Boolean, Type.Integer):
                 {
-                    result = isExplicit;
+                    result = isExplicit && result;
                     if(!isExplicit)
                     {
                         Console.WriteLine("Cannot convert boolean to integer implicitly");
