@@ -661,13 +661,17 @@ public class Logical : Tree
             return
                 $"br label %logical_start_{uniqueId}\n" +
                 $"logical_start_{uniqueId}:\n" +
-                lTreeCode +
-                $"br {children[0]}, label %logical_end_{uniqueId}, label %logical_right_{uniqueId}\n" +
+                lTreeCode + 
+                $"br label %logical_prestart_{uniqueId}\n" +
+                $"logical_prestart_{uniqueId}:\n" +
+                $"br {children[0]}, label %logical_preend_{uniqueId}, label %logical_right_{uniqueId}\n" +
                 $"logical_right_{uniqueId}:\n" +
                 rTreeCode +
+                $"br label %logical_preend_{uniqueId}\n" +
+                $"logical_preend_{uniqueId}:\n" +
                 $"br label %logical_end_{uniqueId}\n" +
                 $"logical_end_{uniqueId}:\n" +
-                $"%{resultVariable} = phi i1 [true, %logical_start_{uniqueId}], [%{children[1].resultVariable}, %logical_right_{uniqueId}]\n";
+                $"%{resultVariable} = phi i1 [true, %logical_prestart_{uniqueId}], [%{children[1].resultVariable}, %logical_preend_{uniqueId}]\n";
         }
         else
         {
@@ -675,12 +679,16 @@ public class Logical : Tree
                 $"br label %logical_start_{uniqueId}\n" +
                 $"logical_start_{uniqueId}:\n" +
                 lTreeCode +
-                $"br {children[0]}, label %logical_right_{uniqueId}, label %logical_end_{uniqueId}\n" +
+                $"br label %logical_prestart_{uniqueId}\n" +
+                $"logical_prestart_{uniqueId}:\n" +
+                $"br {children[0]}, label %logical_right_{uniqueId}, label %logical_preend_{uniqueId}\n" +
                 $"logical_right_{uniqueId}:\n" +
                 rTreeCode +
+                $"br label %logical_preend_{uniqueId}\n" +
+                $"logical_preend_{uniqueId}:\n" +
                 $"br label %logical_end_{uniqueId}\n" +
                 $"logical_end_{uniqueId}:\n" +
-                $"%{resultVariable} = phi i1 [false, %logical_start_{uniqueId}], [%{children[1].resultVariable}, %logical_right_{uniqueId}]\n";
+                $"%{resultVariable} = phi i1 [false, %logical_prestart_{uniqueId}], [%{children[1].resultVariable}, %logical_preend_{uniqueId}]\n";
         }
     }
 
