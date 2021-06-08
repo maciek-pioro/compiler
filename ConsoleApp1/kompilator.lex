@@ -6,8 +6,6 @@ IntDec              (0|[1-9][0-9]*)
 IntHex              (0x|0X)[0-9a-fA-F]+
 RealNumber          (0|[1-9][0-9]*)\.[0-9]+
 Ident               [a-zA-Z][a-zA-Z0-9]*
-// Ident               (x|y|a)
-// PrintErr            "print"("@"|"$"|[a-z0-9])[a-z0-9]*
 Comment             \/\/.*\n
 String              \"[^"]*\"
 Whitespace          [ \t\n\f\r]
