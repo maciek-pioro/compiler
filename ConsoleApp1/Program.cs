@@ -665,7 +665,7 @@ public class Logical : Tree
                 lTreeCode + 
                 $"br label %logical_prestart_{uniqueId}\n" +
                 $"logical_prestart_{uniqueId}:\n" +
-                $"br {children[0]}, label %logical_preend_{uniqueId}, label %logical_right_{uniqueId}\n" +
+                $"br {children[0]}, label %logical_end_{uniqueId}, label %logical_right_{uniqueId}\n" +
                 $"logical_right_{uniqueId}:\n" +
                 rTreeCode +
                 $"br label %logical_preend_{uniqueId}\n" +
@@ -682,7 +682,7 @@ public class Logical : Tree
                 lTreeCode +
                 $"br label %logical_prestart_{uniqueId}\n" +
                 $"logical_prestart_{uniqueId}:\n" +
-                $"br {children[0]}, label %logical_right_{uniqueId}, label %logical_preend_{uniqueId}\n" +
+                $"br {children[0]}, label %logical_right_{uniqueId}, label %logical_end_{uniqueId}\n" +
                 $"logical_right_{uniqueId}:\n" +
                 rTreeCode +
                 $"br label %logical_preend_{uniqueId}\n" +
