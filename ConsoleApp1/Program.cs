@@ -148,29 +148,30 @@ public class Wrapper : Tree
 
     public override string genCode()
     {
+        var childCode = "";
         Type inType = children[0].type;
         Type outType = type;
         switch (inType, outType)
         {
             case (Type.Double, Type.Integer):
             {
-                var childCode = children[0].genCode();
+                childCode = children[0].genCode();
                 return childCode + "\n" + $"%{resultVariable} = fptosi {children[0]} to i32\n";
             }
             case (Type.Integer, Type.Double):
             {
-                var childCode = children[0].genCode();
+                childCode = children[0].genCode();
                 return childCode + "\n" + $"%{resultVariable} = sitofp {children[0]} to double\n";
             }
             case (Type.Boolean, Type.Integer):
             {
-                var childCode = children[0].genCode();
+                childCode = children[0].genCode();
                 return childCode + "\n" + $"%{resultVariable} = select {children[0]}, i32 1, i32 0\n";
             }
         }
-        // Conversion int -> int, double -> double or bool->bool. Do nothing.
+        childCode = children[0].genCode();
         resultVariable = children[0].resultVariable;
-        return children[0].genCode();
+        return childCode;
     }
 
     public override bool validate()
