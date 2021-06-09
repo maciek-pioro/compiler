@@ -46,6 +46,7 @@ public static class TypeStringer
 
 public abstract class Tree
 {
+    public int lineNumber;
     public Dictionary<String, Variable> variables;
     public Tree parent;
     public List<Tree> children;
@@ -55,13 +56,14 @@ public abstract class Tree
     protected int uniqueId;
     private static int ids = 0;
 
-    public Tree()
+    public Tree(int lineNumber)
     {
         variables = new Dictionary<string, Variable>();
         resultVariable = $"tmp_{temporaryVariablesCount}";
         this.children = new List<Tree>();
         ++temporaryVariablesCount;
         uniqueId = ids++;
+        this.lineNumber = lineNumber;
     }
 
     public Variable getVariable(string identifier)
@@ -133,7 +135,7 @@ public class Wrapper : Tree
 {
     bool isExplicit;
 
-    public Wrapper (Type outType, Tree child, bool isExplicit = false): base()
+    public Wrapper (Type outType, Tree child, int lineNumber, bool isExplicit = false): base(lineNumber)
     {
         children.Add(child);
         type = outType;
@@ -231,7 +233,7 @@ public class Program: Tree
     public List<Tree> stringNodes;
     public List<Tree> declarationNodes;
 
-    public Program(Tree block)
+    public Program(Tree block): base(0)
     {
         this.children.Add(block);
         this.stringNodes = new List<Tree>();
@@ -301,7 +303,7 @@ public class Block : Tree
     private Tree declarations { get { return children[0]; } }
     private Tree instructions { get { return children[1]; } }
 
-    public Block(Tree declarations, Tree instructions)
+    public Block(Tree declarations, Tree instructions, int lineNumber): base(0)
     {
         this.children.Add(declarations);
         this.children.Add(instructions);
@@ -320,7 +322,7 @@ public class Block : Tree
 public class Literal : Tree
 {
     string value;
-    public Literal(Type type, string value)
+    public Literal(Type type, string value, int lineNumber): base(lineNumber)
     {
         this.type = type;
         if(this.type == Type.Boolean)
@@ -350,7 +352,7 @@ public class Literal : Tree
 public class DeclarationList : Tree
 {
 
-    public DeclarationList(): base()
+    public DeclarationList(int lineNumber): base(lineNumber + 1)
     {
         children = new List<Tree>();
         variables = new Dictionary<string, Variable>();
@@ -386,7 +388,7 @@ public class DeclarationList : Tree
         {
             if (tmpVariables.TryGetValue(((Variable)child).name, out var variable))
             {
-                Console.WriteLine($"variable {variable.name} already declared");
+                Console.WriteLine($"Line {child.lineNumber}: Variable {variable.name} declared on line {variable.lineNumber}");
                 result = false;
             } else
             {
@@ -405,7 +407,7 @@ public class DeclarationList : Tree
 public class InstructionList : Tree
 {
 
-    public InstructionList() : base() { }
+    public InstructionList(int lineNumber) : base(lineNumber) { }
 
     public override String genCode()
     {
@@ -417,10 +419,6 @@ public class InstructionList : Tree
         return result;
     }
 
-    public override bool validate()
-    {
-        return base.validate();
-    }
 }
 
 public class Variable : Tree
@@ -429,7 +427,7 @@ public class Variable : Tree
     public string name;
     private static int variablesCount = 0;
 
-    public Variable(Type type, string name): base()
+    public Variable(Type type, string name, int lineNumber): base(lineNumber)
     {
         this.name = name;
         this.type = type;
@@ -516,15 +514,15 @@ public class Relation : Tree
         }
     }
 
-    public Relation(Tree lTree, Tree rTree, String symbol) 
+    public Relation(Tree lTree, Tree rTree, String symbol, int lineNumber): base(lineNumber) 
     {
         originalL = lTree;
         originalR = rTree;
         this.symbol = symbol;
         this.type = Type.Boolean;
         Type generalType = TypeHelper.getMoreGeneralType(lTree.type, rTree.type);
-        children.Add(new Wrapper(generalType, lTree));
-        children.Add(new Wrapper(generalType, rTree));
+        children.Add(new Wrapper(generalType, lTree, lineNumber));
+        children.Add(new Wrapper(generalType, rTree, lineNumber));
     }
 
     public override string genCode()
@@ -542,7 +540,7 @@ public class Relation : Tree
         {
             if (!"==".Equals(symbol) && !"!=".Equals(symbol))
             {
-                Console.WriteLine($"Operator {symbol} can only be used with numeric types");
+                Console.WriteLine($"Line {lineNumber}: Operator {symbol} can only be used with numeric types");
                 result = false;
             }
         }
@@ -603,15 +601,15 @@ public class MathOperator : Tree
         }
     }
 
-    public MathOperator(Tree lTree, Tree rTree, string symbol)
+    public MathOperator(Tree lTree, Tree rTree, string symbol, int lineNumber): base(lineNumber)
     {
         originalL = lTree;
         originalR = rTree;
         Type generalType = TypeHelper.getMoreGeneralType(lTree.type, rTree.type);
         generalType = TypeHelper.getMoreGeneralType(Type.Integer, generalType);
         type = generalType;
-        children.Add(new Wrapper(generalType, lTree));
-        children.Add(new Wrapper(generalType, rTree));
+        children.Add(new Wrapper(generalType, lTree, lineNumber));
+        children.Add(new Wrapper(generalType, rTree, lineNumber));
         this.symbol = symbol;
     }
 
@@ -630,13 +628,13 @@ public class Logical : Tree
     string function;
     Tree originalL, originalR;
 
-    public Logical(Tree lTree, Tree rTree, string symbol)
+    public Logical(Tree lTree, Tree rTree, string symbol, int lineNumber): base(lineNumber)
     {
         this.type = Type.Boolean;
         originalL = lTree;
         originalR = rTree;
-        children.Add(new Wrapper(Type.Boolean, lTree));
-        children.Add(new Wrapper(Type.Boolean, rTree));
+        children.Add(new Wrapper(Type.Boolean, lTree, lineNumber));
+        children.Add(new Wrapper(Type.Boolean, rTree, lineNumber));
         if("&&".Equals(symbol))
         {
             function = "and";
@@ -700,12 +698,12 @@ public class Bitwise : Tree
     string function;
     Tree originalL, originalR;
 
-    public Bitwise(Tree lTree, Tree rTree, string symbol)
+    public Bitwise(Tree lTree, Tree rTree, string symbol, int lineNumber): base(lineNumber)
     {
         originalL = lTree;
         originalR = rTree;
-        children.Add(new Wrapper(Type.Integer, rTree));
-        children.Add(new Wrapper(Type.Integer, lTree));
+        children.Add(new Wrapper(Type.Integer, rTree, lineNumber));
+        children.Add(new Wrapper(Type.Integer, lTree, lineNumber));
         type = Type.Integer;
         if ("|".Equals(symbol)) function = "or";
         else function = "and";
@@ -732,11 +730,11 @@ public class Unary : Tree
     string symbol;
     Tree originalChild;
 
-    public Unary(Tree child, string symbol)
+    public Unary(Tree child, string symbol, int lineNumber): base(lineNumber)
     {
         this.symbol = symbol;
         originalChild = child;
-        children.Add(new Wrapper(Type.Boolean, child));
+        children.Add(new Wrapper(Type.Boolean, child, lineNumber));
     }
 
     public override void markTypes(Type? type = null)
@@ -800,7 +798,7 @@ public class Unary : Tree
 public class Write : Tree
 {
     private bool isHex;
-    public Write(Tree child, bool isHex = false): base()
+    public Write(Tree child, int lineNumber, bool isHex = false): base(lineNumber)
     {
         this.children.Add(child);
         this.isHex = isHex;
@@ -862,7 +860,7 @@ public class Write : Tree
         bool baseResult = base.validate();
         if (isHex && children[0].type != Type.Integer)
         {
-            Console.WriteLine("Only integer values can be displayed as hex");
+            Console.WriteLine($"Line {lineNumber}: Only integer values can be displayed as hex");
             result = false;
         }
         return baseResult && result;
@@ -875,7 +873,7 @@ public class Read : Tree
     private Variable variable;
     private string identifier;
     private bool isHex;
-    public Read(string identifier, bool isHex = false) : base()
+    public Read(string identifier, int lineNumber, bool isHex = false) : base(lineNumber)
     {
         this.identifier = identifier;
         this.isHex = isHex;
@@ -915,18 +913,18 @@ public class Read : Tree
         bool result = true;
         if (variable is null)
         {
-            Console.WriteLine($"Undeclared identifier: {identifier}");
+            Console.WriteLine($"Line {lineNumber}: Undeclared identifier: {identifier}");
             result = false;
         }
         this.variable = variable;
         if (variable.type != Type.Integer && variable.type != Type.Double)
         {
-            Console.WriteLine($"Can only write to integer and double");
+            Console.WriteLine($"Line {lineNumber}: Can only write to integer and double");
             result = false;
         }
         if (variable.type != Type.Integer && isHex)
         {
-            Console.WriteLine($"Can only write hex to int");
+            Console.WriteLine($"Line {lineNumber}: Can only write hex to int");
             result = false;
         }
         return result;
@@ -938,7 +936,7 @@ public class If : Tree
 {
     bool hasElse = false;
 
-    public If(Tree condition, Tree body, Tree elseBody) : base()
+    public If(Tree condition, Tree body, Tree elseBody, int lineNumber) : base(lineNumber)
     {
         children.Add(condition);
         children.Add(body);
@@ -971,7 +969,7 @@ public class If : Tree
         bool result = base.validate();
         if(children[0].type!=Type.Boolean)
         {
-            Console.WriteLine("If-condition must be a boolean");
+            Console.WriteLine($"Line {lineNumber}: If-condition must be a boolean");
             result = false;
         }
         return result;
@@ -981,7 +979,7 @@ public class If : Tree
 
 public class While : Tree
 {
-    public While(Tree condition, Tree body) : base()
+    public While(Tree condition, Tree body, int lineNumber) : base(lineNumber)
     {
         children.Add(condition);
         children.Add(body);
@@ -1006,7 +1004,7 @@ public class While : Tree
         bool result = base.validate();
         if (children[0].type != Type.Boolean)
         {
-            Console.WriteLine("While-condition must be a boolean");
+            Console.WriteLine($"Line {lineNumber}: While-condition must be a boolean");
             result = false;
         }
         return result;
@@ -1022,7 +1020,7 @@ public class StringLiteral : Tree
     public int effectiveLength;
 
 
-    public StringLiteral(string value) :base() {
+    public StringLiteral(string value, int lineNumber) :base(lineNumber) {
         stringIdentifier = $"@string_{stringCounter}";
         ++stringCounter;
         this.type = Type.String;
@@ -1054,19 +1052,17 @@ public class Assign: Tree
     string identifier;
     Tree originalChild;
     
-    public Assign(string identifier, Tree rTree): base()
+    public Assign(string identifier, Tree rTree, int lineNumber): base(lineNumber)
     {
         originalChild = rTree;
-        //Type moreGeneralType = TypeHelper.getMoreGeneralType();
         this.identifier = identifier;
-        this.children.Add(new Wrapper(Type.Boolean, rTree));
+        this.children.Add(new Wrapper(Type.Boolean, rTree, lineNumber));
     }
 
     public override string genCode()
     {
         Tree rTree = children[0];
         var variable = getVariable(identifier);
-        //resultVariable = rTree.resultVariable;
         return rTree.genCode() + "\n" 
             + $"store {rTree}, {variable}\n"
             + $"%{this.resultVariable} = load {this.type.ToLLVMString()}, {variable}\n";
@@ -1090,7 +1086,7 @@ public class Assign: Tree
         var variable = getVariable(identifier);
         if (variable is null)
         {
-            Console.WriteLine($"Undeclared identifier: {identifier}");
+            Console.WriteLine($"Line {lineNumber}: Undeclared identifier: {identifier}");
             result = false;
         }
         result = rTree.validate() && result;
@@ -1102,7 +1098,7 @@ public class Assign: Tree
 public class Identifier : Tree
 {
     string identifier;
-    public Identifier(string identifier): base()
+    public Identifier(string identifier, int lineNumber): base(lineNumber)
     {
         this.identifier = identifier;
     }
@@ -1126,7 +1122,7 @@ public class Identifier : Tree
         var variable = getVariable(identifier);
         if (variable is null)
         {
-            Console.WriteLine($"Undeclared identifier: {identifier}");
+            Console.WriteLine($"Line {lineNumber}: Undeclared identifier: {identifier}");
             return false;
         }
         this.type = variable.type;
@@ -1136,7 +1132,7 @@ public class Identifier : Tree
 
 public class Return : Tree
 {
-    public Return() : base() { }
+    public Return(int lineNumber) : base(lineNumber) { }
 
     override public string genCode()
     {
