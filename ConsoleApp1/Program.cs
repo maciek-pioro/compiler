@@ -1024,8 +1024,7 @@ public class StringLiteral : Tree
         stringIdentifier = $"@string_{stringCounter}";
         ++stringCounter;
         this.type = Type.String;
-        value = value.Trim('"');
-        //var parts = value.Split(new string[] { @"\n" }, StringSplitOptions.None);
+        value = value.Substring(1, value.Length - 2);
         string result = "";
         int escapeSequencesCount = 0;
         for(int i=0; i<value.Length; ++i)
