@@ -914,7 +914,7 @@ public class Read : Tree
         if (variable is null)
         {
             Console.WriteLine($"Line {lineNumber}: Undeclared identifier: {identifier}");
-            result = false;
+            return false;
         }
         this.variable = variable;
         if (variable.type != Type.Integer && variable.type != Type.Double)
