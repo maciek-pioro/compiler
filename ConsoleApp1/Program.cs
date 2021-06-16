@@ -186,19 +186,19 @@ public class Wrapper : Tree
             case (Type.Boolean, Type.Double):
                 {
                     result = false;
-                    Console.WriteLine("Cannot convert boolean to double");
+                    Console.WriteLine($"Line {lineNumber}: Cannot convert boolean to double");
                     break;
                 }
             case (Type.Double, Type.Boolean):
                 {
                     result = false;
-                    Console.WriteLine("Cannot convert double to boolean");
+                    Console.WriteLine($"Line {lineNumber}: Cannot convert double to boolean");
                     break;
                 }
             case (Type.Integer, Type.Boolean):
                 {
                     result = false;
-                    Console.WriteLine("Cannot convert integer to boolean");
+                    Console.WriteLine($"Line {lineNumber}: Cannot convert integer to boolean");
                     break;
                 }
             case (Type.Boolean, Type.Integer):
@@ -206,7 +206,7 @@ public class Wrapper : Tree
                     result = isExplicit && result;
                     if(!isExplicit)
                     {
-                        Console.WriteLine("Cannot convert boolean to integer implicitly");
+                        Console.WriteLine($"Line {lineNumber}: Cannot convert boolean to integer implicitly");
                     }
                     break;
                 }
@@ -219,7 +219,7 @@ public class Wrapper : Tree
                     result = isExplicit && result;
                     if (!isExplicit)
                     {
-                        Console.WriteLine("Cannot convert double to integer implicitly");
+                        Console.WriteLine($"Line {lineNumber}: Cannot convert double to integer implicitly");
                     }
                     break;
                 }
@@ -1025,10 +1025,40 @@ public class StringLiteral : Tree
         ++stringCounter;
         this.type = Type.String;
         value = value.Trim('"');
-        var parts = value.Split(new string[] { @"\n" }, StringSplitOptions.None);
-        int newLines = parts.Length - 1;
-        this.value = String.Join(@"\0A", parts);
-        effectiveLength = this.value.Length - 2 * newLines + 1;
+        //var parts = value.Split(new string[] { @"\n" }, StringSplitOptions.None);
+        string result = "";
+        int escapeSequencesCount = 0;
+        for(int i=0; i<value.Length; ++i)
+        {
+            if (value[i] == '\\')
+            {
+                switch (value[i + 1])
+                {
+                    case 'n':
+                        result += @"\0A";
+                        ++i;
+                        escapeSequencesCount++;
+                        break;
+                    case '"':
+                        result += @"\22";
+                        ++i;
+                        escapeSequencesCount++;
+                        break;
+                    case '\\':
+                        result += @"\5C";
+                        escapeSequencesCount++;
+                        ++i;
+                        break;
+                }
+                continue;
+            }
+            else
+            {
+                result += value[i];
+            }
+        }
+        this.value = result;
+        effectiveLength = this.value.Length - 2 * escapeSequencesCount + 1;
     }
 
     public override string genCode()
@@ -1186,7 +1216,7 @@ public class Compiler
         Program.setParent();
         Program.markTypes();
         if(!Program.validate()) {
-            Console.WriteLine("Errors detected :(, aborting");
+            Console.WriteLine("Errors detected, aborting");
             return 1;
         }
         Program.hoistStrings();

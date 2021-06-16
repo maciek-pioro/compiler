@@ -7,7 +7,7 @@ IntHex              (0x|0X)[0-9a-fA-F]+
 RealNumber          (0|[1-9][0-9]*)\.[0-9]+
 Ident               [a-zA-Z][a-zA-Z0-9]*
 Comment             \/\/.*\n
-String              \"[^"]*\"
+String              \"([^\n\\\"]|\\.)*\"
 Whitespace          [ \t\n\f\r]
 
 %%
